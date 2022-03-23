@@ -12,4 +12,6 @@ public interface UserConversationRepository extends CassandraRepository<UserConv
 
     @Query("DELETE FROM userConversation WHERE userId in :userIds AND clusterKey > :minConId AND clusterKey < :maxConId")
     void deleteAllByIds(@Param("userIds") List<String> userIds, @Param("minConId") String minConId, @Param("maxConId") String maxConId);
+
+    UserConversation findOneByUserIdAndClusterKey(String userId, String clusterKey);
 }

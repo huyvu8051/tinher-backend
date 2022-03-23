@@ -1,7 +1,7 @@
 package com.bobvu.tinherbackend.chat;
 
 import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
-import com.bobvu.tinherbackend.cassandra.model.Conversation;
+import com.bobvu.tinherbackend.cassandra.model.Member;
 import com.bobvu.tinherbackend.cassandra.model.User;
 import com.bobvu.tinherbackend.cassandra.model.UserConversation;
 import org.springframework.data.domain.Pageable;
@@ -11,9 +11,9 @@ import java.util.List;
 public interface ChatService {
 
 
-    Conversation createNewConversation(User creator, String conversationName);
+    void createNewConversation(User creator, String conversationName);
 
-    Conversation inviteUserToConversation(User inviter, User invitee, Conversation conversation);
+    void inviteUserToConversation(User inviter, User invitee, String clusterKey);
 
     /**
      *  get all conversation
@@ -34,12 +34,17 @@ public interface ChatService {
      */
     List<ChatMessage> getAllChatMessageInConversation(String conversationId, Pageable pageable);
 
+
     /**
      * @param sender
-     * @param text
-     * @param conversation
+     * @param conversationId
+     * @param conversationName
+     * @param lastMessageAt
+     * @param lastMessageText
+     * @param lastMessageSender
+     * @param members
      */
-    void sendAMessageToAConversation(User sender, String text, Conversation conversation);
+    public void sendMessage(User sender, String conversationId,String conversationName,Long lastMessageAt,  String lastMessageText, String lastMessageSender,List<Member> members);
 
     /**
      * seen a message in a conversation then everyone in conversation can know who has already read that message

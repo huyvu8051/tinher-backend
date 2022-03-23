@@ -15,23 +15,24 @@ import java.util.List;
 public class UserConversation {
 
     @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING)
-    private String clusterKey; // create by conversationId + create time
+    private String clusterKey;     // create by conversationId + create time
 
     @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private String userId;
 
-    private String conversationId;
+    private String conversationId;//
     private Long createTime;
 
-    private Long lastMessageAt;
-
-    private String conversationName;
-
-    private String lastMessageText;
-    private String lastMessageSender;
+    private String conversationName;//
 
 
-    private List<Member> members;
+    private Long lastMessageAt;//
+
+    private String lastMessageText;//
+    private String lastMessageSender;//
+
+
+    private List<Member> members;//
 
 
 
