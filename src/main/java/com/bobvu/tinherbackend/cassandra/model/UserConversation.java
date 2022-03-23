@@ -6,17 +6,34 @@ import org.springframework.data.cassandra.core.cql.Ordering;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
-import org.springframework.data.cassandra.core.mapping.UserDefinedType;
+
+import java.util.List;
 
 @Table
-@Builder
 @Data
-public class ChatMessage {
-    @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING)
-    private Long sentAt;
+@Builder
+public class UserConversation {
 
-    @PrimaryKeyColumn(ordinal = 1, type = PrimaryKeyType.PARTITIONED)
+    @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING)
+    private String clusterKey; // create by conversationId + create time
+
+    @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.PARTITIONED)
+    private String userId;
+
     private String conversationId;
-    private String author;
-    private String text;
+    private Long createTime;
+
+    private Long lastMessageAt;
+
+    private String conversationName;
+
+    private String lastMessageText;
+    private String lastMessageSender;
+
+
+    private List<Member> members;
+
+
+
+
 }

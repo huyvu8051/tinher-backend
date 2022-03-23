@@ -17,14 +17,8 @@ public class User {
     @Id
     @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.PARTITIONED)
     private String id;
-    private String partition;
     private String username;
-
-    private UserPreferences userPreferences;
 
     private Long lastSeenAt;
 
-    private List<Conversation> conversations;
-
-    private String presence;
 }
