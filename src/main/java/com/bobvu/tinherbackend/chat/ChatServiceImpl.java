@@ -3,7 +3,7 @@ package com.bobvu.tinherbackend.chat;
 import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
 import com.bobvu.tinherbackend.cassandra.model.Member;
 import com.bobvu.tinherbackend.cassandra.model.User;
-import com.bobvu.tinherbackend.cassandra.model.UserConversation;
+import com.bobvu.tinherbackend.cassandra.model.Conversation;
 import com.bobvu.tinherbackend.cassandra.repository.ChatMessageRepository;
 import com.bobvu.tinherbackend.cassandra.repository.UserConversationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,15 +34,14 @@ public class ChatServiceImpl implements ChatService{
                 .memberShipStatus("Creator")
                 .build();
 
+        long thisTime = System.currentTimeMillis();
 
-
-
-        sendMessage(creator,"CONVER-" + UUID.randomUUID(), conversationName,System.currentTimeMillis(),creator.getUsername() + " created a new conversation name " + conversationName, "System",Arrays.asList(mem ));
+        sendMessage(creator,"CONVER-" + UUID.randomUUID(),thisTime, conversationName,System.currentTimeMillis(),creator.getUsername() + " created a new conversation name " + conversationName, "System",Arrays.asList(mem ));
 
 
     }
 
-    public void sendMessage(User sender, String conversationId,String conversationName,Long lastMessageAt,  String lastMessageText, String lastMessageSender,List<Member> members){
+    public void sendMessage(User sender, String conversationId, long oldConversationCreateTime, String conversationName,Long lastMessageAt,  String lastMessageText, String lastMessageSender,List<Member> members){
         long thisTime = System.currentTimeMillis();
 
 
@@ -61,12 +60,11 @@ public class ChatServiceImpl implements ChatService{
         // save new Conversation
 
 
-        List<UserConversation> userCons = new ArrayList<>();
+        List<Conversation> userCons = new ArrayList<>();
 
 
         for(Member mem : members){
-            UserConversation uc = UserConversation.builder()
-                    .clusterKey(conversationId + "-" + System.currentTimeMillis())
+            Conversation uc = Conversation.builder()
                     .userId(mem.getUserId())
                     .conversationId(conversationId)
                     .createTime(System.currentTimeMillis())
@@ -83,11 +81,9 @@ public class ChatServiceImpl implements ChatService{
         // delete all old conversation
         List<String> collect = members.stream().map(e -> e.getUserId()).collect(Collectors.toList());
 
-        String minConId = conversationId + "-0000000000000";
 
-        String maxConId = conversationId + "-" + thisTime;
 
-        userConversationRepository.deleteAllByIds(collect, minConId, maxConId);
+        userConversationRepository.deleteAllByIds(collect, oldConversationCreateTime, conversationId);
 
 
 
@@ -98,9 +94,9 @@ public class ChatServiceImpl implements ChatService{
 
 
     @Override
-    public void inviteUserToConversation(User inviter, User invitee, String  clusterKey) {
+    public void inviteUserToConversation(User inviter, User invitee, String  clusterKey, long oldCreateTime) {
 
-        UserConversation ucon = userConversationRepository.findOneByUserIdAndClusterKey(inviter.getId(), clusterKey);
+        Conversation ucon = userConversationRepository.findOneByUserIdAndConversationIdAndCreateTime(inviter.getId(), clusterKey, 9l);
         List<Member> members = new ArrayList<>(ucon.getMembers());
 
         Member newMem = Member.builder().userId(invitee.getId())
@@ -110,16 +106,16 @@ public class ChatServiceImpl implements ChatService{
 
 
         long thisTime = System.currentTimeMillis();
-        sendMessage(inviter, ucon.getConversationId(), ucon.getConversationName(),thisTime, invitee.getUsername() + " invited by " + inviter.getUsername(), "System", members );
+        sendMessage(inviter, ucon.getConversationId(), oldCreateTime, ucon.getConversationName(),thisTime, invitee.getUsername() + " invited by " + inviter.getUsername(), "System", members );
 
 
     }
 
     @Override
-    public List<UserConversation> getAllConversation(String userId, Pageable pageable) {
+    public List<Conversation> getAllConversation(String userId, Pageable pageable) {
 
 
-        List<UserConversation> userCons = userConversationRepository.findAllByUserId(userId);
+        List<Conversation> userCons = userConversationRepository.findAllByUserId(userId);
 
         return userCons;
     }

@@ -12,16 +12,14 @@ import java.util.List;
 @Table
 @Data
 @Builder
-public class UserConversation {
+public class Conversation {
 
     @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING)
-    private String clusterKey;     // create by conversationId + create time
+    private String conversationId;
 
-    @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.PARTITIONED)
+    @PrimaryKeyColumn(type = PrimaryKeyType.PARTITIONED)
     private String userId;
 
-    private String conversationId;//
-    private Long createTime;
 
     private String conversationName;//
 
