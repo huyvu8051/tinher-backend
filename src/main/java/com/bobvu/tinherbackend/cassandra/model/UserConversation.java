@@ -2,38 +2,18 @@ package com.bobvu.tinherbackend.cassandra.model;
 
 import lombok.Builder;
 import lombok.Data;
-import org.springframework.data.cassandra.core.cql.Ordering;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
 
-import java.util.List;
-
 @Table
 @Data
 @Builder
-public class Conversation {
-
-    @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING)
-    private long lastMessageTime;
-
+public class UserConversation {
     @PrimaryKeyColumn(type = PrimaryKeyType.PARTITIONED)
     private String userId;
-
+    @PrimaryKeyColumn(type = PrimaryKeyType.CLUSTERED)
     private String conversationId;
 
-
-    private String conversationName;//
-
-
-    private ChatMessageType lastMessage;
-
-
-    private List<Member> members;//
-
-    private List<String> memberIds;
-
-
-
-
+    private long lastMessageTime;
 }

@@ -1,17 +1,18 @@
 package com.bobvu.tinherbackend.cassandra.repository;
 
-import com.bobvu.tinherbackend.cassandra.model.Conversation;
+import com.bobvu.tinherbackend.cassandra.model.UserConversation;
 import org.springframework.data.cassandra.repository.CassandraRepository;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface UserConversationRepository extends CassandraRepository<Conversation, String> {
-    List<Conversation> findAllByUserId(String userId);
+public interface UserConversationRepository extends CassandraRepository<UserConversation, String> {
+    UserConversation findOneByUserIdAndConversationId(String userId, String conversationId);
 
-    @Query("DELETE FROM userConversation WHERE userId in :userIds AND createTime = :createTime AND conversationId = :conversationId")
-    void deleteAllByIds(@Param("userIds") List<String> userIds, @Param("createTime") long createTime, @Param("conversationId") String conversationId);
+    @Query("SELECT * FROM userConversation WHERE userId in :userIds and conversationId = :conversationId")
+    List<UserConversation> findAllByUserIdsAndConverId(@Param("userIds") List<String> userIds, @Param("conversationId") String converId);
 
-    Conversation findOneByUserIdAndConversationIdAndCreateTime(String userId, String clusterKey, long createTime);
+    @Query("UPDATE userConversation set lastMessageTime = :lastMessageTime WHERE userId in :userIds and conversationId = :conversationId")
+    void updateLastMessageTime(@Param("userIds") List<String> userIds,@Param("conversationId") String conversationId, @Param("lastMessageTime") long lastMessageTime);
 }

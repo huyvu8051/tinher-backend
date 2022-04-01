@@ -9,11 +9,11 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface ChatService {
+    Conversation findConversationById(String userId, String conversationId);
 
+    String createNewConversation(User creator, String conversationName);
 
-    void createNewConversation(User creator, String conversationName);
-
-    void inviteUserToConversation(User inviter, User invitee, String clusterKey, long oldCreateTime);
+    void inviteUserToConversation(User inviter, User invitee, String clusterKey);
 
     /**
      *  get all conversation
@@ -35,16 +35,8 @@ public interface ChatService {
     List<ChatMessage> getAllChatMessageInConversation(String conversationId, Pageable pageable);
 
 
-    /**
-     * @param sender
-     * @param conversationId
-     * @param conversationName
-     * @param lastMessageAt
-     * @param lastMessageText
-     * @param lastMessageSender
-     * @param members
-     */
-    public void sendMessage(User sender, String conversationId, long oldConversationCreateTime,String conversationName,Long lastMessageAt,  String lastMessageText, String lastMessageSender,List<Member> members);
+
+    void sendMessage(User sender, String conversationId,  String text);
 
     /**
      * seen a message in a conversation then everyone in conversation can know who has already read that message
@@ -52,4 +44,5 @@ public interface ChatService {
      * @param chatMessage
      */
     void seenAMessage(User seenBy, ChatMessage chatMessage);
+
 }

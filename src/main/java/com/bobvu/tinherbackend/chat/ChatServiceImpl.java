@@ -1,121 +1,179 @@
 package com.bobvu.tinherbackend.chat;
 
-import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
-import com.bobvu.tinherbackend.cassandra.model.Member;
-import com.bobvu.tinherbackend.cassandra.model.User;
-import com.bobvu.tinherbackend.cassandra.model.Conversation;
+import com.bobvu.tinherbackend.cassandra.model.*;
 import com.bobvu.tinherbackend.cassandra.repository.ChatMessageRepository;
+import com.bobvu.tinherbackend.cassandra.repository.ConversationRepository;
 import com.bobvu.tinherbackend.cassandra.repository.UserConversationRepository;
+import com.github.javafaker.Faker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ChatServiceImpl implements ChatService{
-
+public class ChatServiceImpl implements ChatService {
 
 
     @Autowired
     private ChatMessageRepository chatMessageRepository;
 
     @Autowired
+    private ConversationRepository conversationRepository;
+    @Autowired
     private UserConversationRepository userConversationRepository;
+
+    Faker faker = new Faker(new Locale("vi-VN"));
+
     @Override
-    public void createNewConversation(User creator, String conversationName) {
-        Member mem = Member.builder()
-                .userId(creator.getId())
-                .username(creator.getUsername())
-                .memberShipStatus("Creator")
-                .build();
+    public String createNewConversation(User creator, String conversationName) {
+
 
         long thisTime = System.currentTimeMillis();
 
-        sendMessage(creator,"CONVER-" + UUID.randomUUID(),thisTime, conversationName,System.currentTimeMillis(),creator.getUsername() + " created a new conversation name " + conversationName, "System",Arrays.asList(mem ));
+        String conversationId = generateConversationId();
 
+
+        UserConversation userCon = UserConversation.builder()
+                .userId(creator.getId())
+                .conversationId(conversationId)
+                .lastMessageTime(thisTime)
+                .build();
+
+        ChatMessageType lm = new ChatMessageType();
+
+        lm.setSentAt(thisTime);
+        lm.setAuthor(creator.getFullName());
+        lm.setText("You create a new conversation");
+
+        Member mem = Member.builder()
+                .memberShipStatus("creator")
+                .userId(creator.getId())
+                .fullName(creator.getFullName())
+                .build();
+
+
+        Conversation con = Conversation.builder()
+                .lastMessageTime(thisTime)
+                .conversationId(conversationId)
+                .userId(creator.getId())
+                .conversationName(conversationName)
+                .lastMessage(lm)
+                .members(Arrays.asList(mem))
+                .memberIds(Arrays.asList(creator.getId()))
+                .build();
+
+        conversationRepository.save(con);
+        userConversationRepository.save(userCon);
+
+
+        this.inviteUserToConversation(creator, creator, conversationId);
+
+        return conversationId;
 
     }
 
-    public void sendMessage(User sender, String conversationId, long oldConversationCreateTime, String conversationName,Long lastMessageAt,  String lastMessageText, String lastMessageSender,List<Member> members){
+    public Conversation findConversationById(String userId, String conversationId) {
+
+        UserConversation uc = userConversationRepository.findOneByUserIdAndConversationId(userId, conversationId);
+
+        Conversation con = conversationRepository.findOneByUserIdAndLastMessageTime(userId, uc.getLastMessageTime());
+        return con;
+
+    }
+
+
+    @Override
+    public void inviteUserToConversation(User inviter, User invitee, String conversationId) {
+
+        Conversation con = this.findConversationById(inviter.getId(), conversationId);
+
+
+        List<Member> members = new ArrayList<>(con.getMembers());
+
+        Member newMem = Member.builder()
+                .userId(invitee.getId())
+                .fullName(invitee.getFullName())
+                .memberShipStatus("Member")
+                .build();
+
+        members.add(newMem);
+        con.getMemberIds().add(invitee.getId());
+        conversationRepository.save(con);
+
+        // change user id to save another conversation of invitee
+        con.setUserId(invitee.getId());
+        conversationRepository.save(con);
+
+        UserConversation uCon = UserConversation.builder()
+                .userId(con.getUserId())
+                .conversationId(con.getConversationId())
+                .lastMessageTime(con.getLastMessageTime())
+                .build();
+
+        userConversationRepository.save(uCon);
+
+        this.sendMessage(inviter, conversationId, inviter.getFullName() + " invited " + invitee.getFullName());
+
+    }
+
+
+    private String generateConversationId() {
+        return UUID.randomUUID().toString();
+    }
+
+
+    public void sendMessage(User sender, String conversationId, String text) {
         long thisTime = System.currentTimeMillis();
 
 
         // save new chat message
-        ChatMessage cm = ChatMessage.builder()
-                .sentAt(thisTime)
-                .conversationId(conversationId)
-                .author(sender.getUsername())
-                .text(lastMessageText)
-                .build();
+        ChatMessage cm = ChatMessage.builder().sentAt(thisTime).conversationId(conversationId).author(sender.getFullName()).text(text).build();
 
 
         chatMessageRepository.save(cm);
 
-
-        // save new Conversation
-
-
-        List<Conversation> userCons = new ArrayList<>();
-
-
-        for(Member mem : members){
-            Conversation uc = Conversation.builder()
-                    .userId(mem.getUserId())
-                    .conversationId(conversationId)
-                    .createTime(System.currentTimeMillis())
-                    .lastMessageText(lastMessageText)
-                    .lastMessageAt(lastMessageAt)
-                    .lastMessageSender(lastMessageSender)
-                    .conversationName(conversationName)
-                    .build();
-
-            userCons.add(uc);
-        }
-        userConversationRepository.saveAll(userCons);
-
-        // delete all old conversation
-        List<String> collect = members.stream().map(e -> e.getUserId()).collect(Collectors.toList());
-
-
-
-        userConversationRepository.deleteAllByIds(collect, oldConversationCreateTime, conversationId);
-
-
-
+        sendConversationMessage(sender, conversationId, cm);
     }
 
+    private void sendConversationMessage(User sender, String conversationId, ChatMessage cm) {
+        Conversation con = this.findConversationById(sender.getId(), conversationId);
 
+        if(con == null){
+            con.getConversationId();
+        }
 
-
-
-    @Override
-    public void inviteUserToConversation(User inviter, User invitee, String  clusterKey, long oldCreateTime) {
-
-        Conversation ucon = userConversationRepository.findOneByUserIdAndConversationIdAndCreateTime(inviter.getId(), clusterKey, 9l);
-        List<Member> members = new ArrayList<>(ucon.getMembers());
-
-        Member newMem = Member.builder().userId(invitee.getId())
-                .username(invitee.getUsername())
-                .memberShipStatus("Member").build();
-        members.add(newMem);
+        List<String> userIds = new ArrayList<>(con.getMemberIds());
 
 
         long thisTime = System.currentTimeMillis();
-        sendMessage(inviter, ucon.getConversationId(), oldCreateTime, ucon.getConversationName(),thisTime, invitee.getUsername() + " invited by " + inviter.getUsername(), "System", members );
 
 
+        List<Conversation> cons = conversationRepository.findAllByUserIdsAndLastMessageTime(userIds, con.getLastMessageTime());
+
+        ChatMessageType cmt = new ChatMessageType(cm);
+
+
+        List<Conversation> collect = cons.stream().map(e -> {
+            e.setLastMessageTime(thisTime);
+            e.setLastMessage(cmt);
+            return e;
+        }).collect(Collectors.toList());
+
+        conversationRepository.saveAll(collect);
+
+        userConversationRepository.updateLastMessageTime(userIds, conversationId, thisTime);
+
+        conversationRepository.deleteAllByIdsAndLastMessageTime(userIds, con.getLastMessageTime());
     }
+
 
     @Override
     public List<Conversation> getAllConversation(String userId, Pageable pageable) {
 
 
-        List<Conversation> userCons = userConversationRepository.findAllByUserId(userId);
+        List<Conversation> userCons = conversationRepository.findAllByUserId(userId);
 
         return userCons;
     }
@@ -125,14 +183,14 @@ public class ChatServiceImpl implements ChatService{
 
         List<ChatMessage> allByConversationId = chatMessageRepository.findAllByConversationId(conversationId, pageable);
 
-
         return allByConversationId;
     }
-
 
 
     @Override
     public void seenAMessage(User seenBy, ChatMessage chatMessage) {
 
     }
+
+
 }

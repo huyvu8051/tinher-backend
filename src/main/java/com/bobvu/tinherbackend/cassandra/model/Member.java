@@ -10,7 +10,7 @@ import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 public class Member {
 
     private String userId;
-    private String username;
+    private String fullName;
     private String memberShipStatus;
 
 }
