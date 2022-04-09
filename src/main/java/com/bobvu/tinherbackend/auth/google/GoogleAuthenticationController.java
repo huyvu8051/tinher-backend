@@ -62,6 +62,7 @@ public class GoogleAuthenticationController {
             }
             String email = payload.getEmail();
 
+
             User user;
             try {
                 Optional<User> optional = userRepository.findById(email);
@@ -98,7 +99,7 @@ public class GoogleAuthenticationController {
                         .about("Chúng ta của hiện tại")
 
                         .roles(Arrays.asList("user"))
-
+                        .socketId(UUID.randomUUID().toString())
 
                         .maxAge(70)
                         .minAge(15)
@@ -124,12 +125,12 @@ public class GoogleAuthenticationController {
                         .lastSeenAt(System.nanoTime()).
                         build();
 
-
+/*
                 userRepository.save(user0);
                 userRepository.save(user1);
 
 
-                for (int i = 0; i < 20; i++) {
+                for (int i = 0; i < 3; i++) {
                     String convId = chatService.createNewConversation(user, faker.university().name());
                     chatService.inviteUserToConversation(user, user1, convId);
                     chatService.inviteUserToConversation(user, user0, convId);
@@ -163,7 +164,7 @@ public class GoogleAuthenticationController {
 
 
 
-
+*/
 
             }
 
@@ -171,6 +172,7 @@ public class GoogleAuthenticationController {
 
             return AuthenticationResponse.builder()
                     .jwt(token)
+                    .userId(user.getId())
                     .username(email)
                     .fullName(user.getFullName())
                     .avatar(user.getAvatar())

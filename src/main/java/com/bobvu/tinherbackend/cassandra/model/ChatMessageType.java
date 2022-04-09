@@ -10,6 +10,7 @@ public class ChatMessageType {
     private long sentAt;
     private String conversationId;
     private String author;
+    private String authorId;
     private String text;
 
     public ChatMessageType() {
@@ -19,6 +20,7 @@ public class ChatMessageType {
         this.sentAt = cm.getSentAt();
         this.conversationId = cm.getConversationId();
         this.author = cm.getAuthor();
+        this.authorId = cm.getAuthorId();
         this.text = cm.getText();
     }
 }

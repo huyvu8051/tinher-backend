@@ -1,4 +1,15 @@
-
+logging:
+  level:
+    org:
+      springframework:
+        data:
+          cassandra:
+            core:
+              cql:
+                CqlTemplate: DEBUG
+huhoot:
+  serverip: 0.0.0.0
+  socket.port: 8082
 server:
   port: 8081
 spring:
@@ -8,7 +19,7 @@ spring:
       keyspace-name: main
       username: SPKGRnkEyaDdMsLGZZyfkehM
       password: -Eb.uhOfdDwcwI0Zot-DIPLEo4gt4rZWRnKOMnKJyoLq2UZPRXsW8Eea.sWT0RrmAI.w09zCe+ZZSjNPgR5e_,gMAJKfmqsnDQy.TwqkLFtL1b2lKnAlIXjH2y-avtIl
-      schema-action: re-create
+      schema-action: none
       request:
         timeout: 20s
       connection:

@@ -48,7 +48,7 @@ public class User implements UserDetails {
 
     @CassandraType(type = CassandraType.Name.LIST, typeArguments = CassandraType.Name.TEXT)
     private List<String> roles;
-    private UUID socketId;
+    private String socketId;
 
 
     @Override

@@ -19,5 +19,6 @@ public class ChatMessage {
     @PrimaryKeyColumn( type = PrimaryKeyType.PARTITIONED)
     private String conversationId;
     private String author;
+    private String authorId;
     private String text;
 }

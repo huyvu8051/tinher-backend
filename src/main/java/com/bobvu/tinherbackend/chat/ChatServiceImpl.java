@@ -4,17 +4,28 @@ import com.bobvu.tinherbackend.cassandra.model.*;
 import com.bobvu.tinherbackend.cassandra.repository.ChatMessageRepository;
 import com.bobvu.tinherbackend.cassandra.repository.ConversationRepository;
 import com.bobvu.tinherbackend.cassandra.repository.UserConversationRepository;
+import com.bobvu.tinherbackend.cassandra.repository.UserRepository;
+import com.corundumstudio.socketio.SocketIOClient;
+import com.corundumstudio.socketio.SocketIOServer;
 import com.github.javafaker.Faker;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class ChatServiceImpl implements ChatService {
 
+    @Autowired
+    private SocketIOServer server;
+
+    @Autowired
+    private UserRepository userRepo;
 
     @Autowired
     private ChatMessageRepository chatMessageRepository;
@@ -29,17 +40,13 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public String createNewConversation(User creator, String conversationName) {
 
-
+        log.info("==============createNewConversation==============");
         long thisTime = System.currentTimeMillis();
 
         String conversationId = generateConversationId();
 
 
-        UserConversation userCon = UserConversation.builder()
-                .userId(creator.getId())
-                .conversationId(conversationId)
-                .lastMessageTime(thisTime)
-                .build();
+
 
         ChatMessageType lm = new ChatMessageType();
 
@@ -58,13 +65,20 @@ public class ChatServiceImpl implements ChatService {
                 .lastMessageTime(thisTime)
                 .conversationId(conversationId)
                 .userId(creator.getId())
+
+                .build();
+
+        conversationRepository.save(con);
+
+        UserConversation userCon = UserConversation.builder()
+                .userId(creator.getId())
+                .conversationId(conversationId)
+                .lastMessageTime(thisTime)
                 .conversationName(conversationName)
                 .lastMessage(lm)
                 .members(Arrays.asList(mem))
                 .memberIds(Arrays.asList(creator.getId()))
                 .build();
-
-        conversationRepository.save(con);
         userConversationRepository.save(userCon);
 
 
@@ -74,23 +88,23 @@ public class ChatServiceImpl implements ChatService {
 
     }
 
-    public Conversation findConversationById(String userId, String conversationId) {
+    public UserConversation findConversationById(String userId, String conversationId) {
 
         UserConversation uc = userConversationRepository.findOneByUserIdAndConversationId(userId, conversationId);
 
-        Conversation con = conversationRepository.findOneByUserIdAndLastMessageTime(userId, uc.getLastMessageTime());
-        return con;
+
+        return uc;
 
     }
 
 
     @Override
     public void inviteUserToConversation(User inviter, User invitee, String conversationId) {
+        log.info("==============inviteUserToConversation==============");
+        UserConversation uCon = userConversationRepository.findOneByUserIdAndConversationId(inviter.getId(), conversationId);
 
-        Conversation con = this.findConversationById(inviter.getId(), conversationId);
 
-
-        List<Member> members = new ArrayList<>(con.getMembers());
+        List<Member> members = new ArrayList<>(uCon.getMembers());
 
         Member newMem = Member.builder()
                 .userId(invitee.getId())
@@ -99,20 +113,20 @@ public class ChatServiceImpl implements ChatService {
                 .build();
 
         members.add(newMem);
-        con.getMemberIds().add(invitee.getId());
-        conversationRepository.save(con);
+        uCon.getMemberIds().add(invitee.getId());
+        userConversationRepository.save(uCon);
 
         // change user id to save another conversation of invitee
-        con.setUserId(invitee.getId());
-        conversationRepository.save(con);
+        uCon.setUserId(invitee.getId());
+        userConversationRepository.save(uCon);
 
-        UserConversation uCon = UserConversation.builder()
-                .userId(con.getUserId())
-                .conversationId(con.getConversationId())
-                .lastMessageTime(con.getLastMessageTime())
+        Conversation con = Conversation.builder()
+                .userId(uCon.getUserId())
+                .conversationId(uCon.getConversationId())
+                .lastMessageTime(uCon.getLastMessageTime())
                 .build();
 
-        userConversationRepository.save(uCon);
+        conversationRepository.save(con);
 
         this.sendMessage(inviter, conversationId, inviter.getFullName() + " invited " + invitee.getFullName());
 
@@ -125,11 +139,17 @@ public class ChatServiceImpl implements ChatService {
 
 
     public void sendMessage(User sender, String conversationId, String text) {
+        log.info("==============sendMessage==============");
         long thisTime = System.currentTimeMillis();
 
 
         // save new chat message
-        ChatMessage cm = ChatMessage.builder().sentAt(thisTime).conversationId(conversationId).author(sender.getFullName()).text(text).build();
+        ChatMessage cm = ChatMessage.builder()
+                .sentAt(thisTime)
+                .conversationId(conversationId)
+                .author(sender.getFullName())
+                .authorId(sender.getId())
+                .text(text).build();
 
 
         chatMessageRepository.save(cm);
@@ -138,52 +158,67 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private void sendConversationMessage(User sender, String conversationId, ChatMessage cm) {
-        Conversation con = this.findConversationById(sender.getId(), conversationId);
+        log.info("==============sendConversationMessage==============");
+        UserConversation ucon = userConversationRepository.findOneByUserIdAndConversationId(sender.getId(), conversationId);
 
-        if(con == null){
-            con.getConversationId();
-        }
-
-        List<String> userIds = new ArrayList<>(con.getMemberIds());
-
+        List<String> userIds = new ArrayList<>(ucon.getMemberIds());
 
         long thisTime = System.currentTimeMillis();
 
-
-        List<Conversation> cons = conversationRepository.findAllByUserIdsAndLastMessageTime(userIds, con.getLastMessageTime());
-
         ChatMessageType cmt = new ChatMessageType(cm);
 
+        userConversationRepository.updateLastMessageTime(userIds, conversationId, thisTime, cmt);
 
-        List<Conversation> collect = cons.stream().map(e -> {
-            e.setLastMessageTime(thisTime);
-            e.setLastMessage(cmt);
-            return e;
-        }).collect(Collectors.toList());
+        List<Conversation> cons = new ArrayList<>();
+        for(String id : userIds){
+            cons.add(Conversation.builder()
+                            .conversationId(conversationId)
+                            .userId(id)
+                            .lastMessageTime(thisTime)
+                    .build());
+        }
 
-        conversationRepository.saveAll(collect);
+        conversationRepository.saveAll(cons);
+        conversationRepository.deleteAllByIdsAndLastMessageTime(userIds, ucon.getLastMessageTime());
 
-        userConversationRepository.updateLastMessageTime(userIds, conversationId, thisTime);
 
-        conversationRepository.deleteAllByIdsAndLastMessageTime(userIds, con.getLastMessageTime());
+
+       List<User> users = userRepo.findAllById(userIds);
+
+       for(User u : users){
+           if(u.getSocketId() != null){
+
+               SocketIOClient client = server.getClient(UUID.fromString(u.getSocketId()));
+               if(client != null){
+                   client.sendEvent("receiveMessage");
+               }
+           }
+       }
     }
 
 
     @Override
-    public List<Conversation> getAllConversation(String userId, Pageable pageable) {
+    public List<UserConversation> getAllConversation(String userId, Pageable pageable) {
 
 
-        List<Conversation> userCons = conversationRepository.findAllByUserId(userId);
+        Slice<Conversation> userCons = conversationRepository.findAllByUserId(userId, pageable);
 
-        return userCons;
+        List<String> cons = userCons.stream().map(e -> e.getConversationId()).collect(Collectors.toList());
+
+        List<UserConversation> result = userConversationRepository.findAllByUserIdAndConversationIds(userId, cons);
+
+        result.sort((e1, e2)-> (int) (e2.getLastMessageTime() - e1.getLastMessageTime()));
+
+        return result;
+
     }
 
     @Override
     public List<ChatMessage> getAllChatMessageInConversation(String conversationId, Pageable pageable) {
 
-        List<ChatMessage> allByConversationId = chatMessageRepository.findAllByConversationId(conversationId, pageable);
+        Slice<ChatMessage> allByConversationId = chatMessageRepository.findAllByConversationId(conversationId, pageable);
 
-        return allByConversationId;
+        return allByConversationId.getContent();
     }
 
 

@@ -2,6 +2,7 @@ package com.bobvu.tinherbackend.chat;
 
 import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
 import com.bobvu.tinherbackend.cassandra.model.Conversation;
+import com.bobvu.tinherbackend.cassandra.model.UserConversation;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,6 +12,6 @@ import java.util.List;
 @Builder
 public class ChatMessageInfo {
     private List<ChatMessage> chatMessages;
-    private Conversation conversation;
+    private UserConversation conversation;
 
 }

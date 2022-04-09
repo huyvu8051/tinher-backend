@@ -17,6 +17,12 @@
 		<java.version>1.8</java.version>
 	</properties>
 	<dependencies>
+		<!-- socket.io -->
+		<dependency>
+			<groupId>com.corundumstudio.socketio</groupId>
+			<artifactId>netty-socketio</artifactId>
+			<version>1.7.19</version>
+		</dependency>
 		<!-- mapstruct -->
 		<dependency>
 			<groupId>org.mapstruct</groupId>

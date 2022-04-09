@@ -12,6 +12,7 @@ import java.util.Collection;
 @AllArgsConstructor
 public class AuthenticationResponse {
     private final String jwt;
+    private String userId;
     private final String username;
     private String fullName;
     private String avatar;

@@ -1,15 +1,12 @@
 package com.bobvu.tinherbackend.chat;
 
-import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
-import com.bobvu.tinherbackend.cassandra.model.Member;
-import com.bobvu.tinherbackend.cassandra.model.User;
-import com.bobvu.tinherbackend.cassandra.model.Conversation;
+import com.bobvu.tinherbackend.cassandra.model.*;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface ChatService {
-    Conversation findConversationById(String userId, String conversationId);
+    UserConversation findConversationById(String userId, String conversationId);
 
     String createNewConversation(User creator, String conversationName);
 
@@ -24,7 +21,7 @@ public interface ChatService {
      */
 
 
-    List<Conversation> getAllConversation(String userId, Pageable pageable);
+    List<UserConversation> getAllConversation(String userId, Pageable pageable);
 
     /** get all chat message in conversation
      *
