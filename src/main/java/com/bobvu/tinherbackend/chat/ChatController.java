@@ -27,7 +27,7 @@ public class ChatController {
 
         List<ChatMessage> chatMess = chatSer.getAllChatMessageInConversation(convId, Pageable.ofSize(limit));
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UserConversation con = chatSer.findConversationById(user.getId(), convId);
+        UserConversation con = chatSer.findConversationById(user.getUsername(), convId);
         return ChatMessageInfo.builder()
                 .chatMessages(chatMess)
                 .conversation(con)
@@ -37,7 +37,7 @@ public class ChatController {
     @GetMapping("/conversations")
     public  GetListConverRes getAllConversations (){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        List<UserConversation> allConversation = chatSer.getAllConversation(user.getId(), PageRequest.of(0, 10));
+        List<UserConversation> allConversation = chatSer.getAllConversation(user.getUsername(), PageRequest.of(0, 10));
         return GetListConverRes.builder()
                 .conversations(allConversation)
                 .build();

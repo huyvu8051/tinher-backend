@@ -1,6 +1,7 @@
 package com.bobvu.tinherbackend.auth.google;
 
 import com.bobvu.tinherbackend.auth.JwtUtil;
+import com.bobvu.tinherbackend.auth.UserService;
 import com.bobvu.tinherbackend.cassandra.model.Gender;
 import com.bobvu.tinherbackend.cassandra.model.Passion;
 import com.bobvu.tinherbackend.cassandra.model.User;
@@ -34,6 +35,9 @@ public class GoogleAuthenticationController {
     @Autowired
     private ChatService chatService;
 
+    @Autowired
+    private UserService userSer;
+
 
     @Autowired
     private ConversationRepository userConversationRepository;
@@ -66,7 +70,7 @@ public class GoogleAuthenticationController {
             User user;
             try {
                 Optional<User> optional = userRepository.findById(email);
-                user = optional.orElseThrow(() -> new UsernameNotFoundException("Account not register!"));
+                user = optional.orElseThrow(() -> new UsernameNotFoundException("Account not registered!"));
 
 
             } catch (UsernameNotFoundException e) {
@@ -82,98 +86,24 @@ public class GoogleAuthenticationController {
                 // Use or store profile information
                 // ...
 
+
+
                 Random rand = new Random();
 
 
-                User build = User.builder()
-                        .id(userId)
-                        .username(email)
-                        .fullName(name)
-                        .avatar(pictureUrl)
-
-                        .images(Arrays.asList(pictureUrl, "https://i.imgur.com/lpzlDQv.jpg", "https://i.imgur.com/pAZ8UUQ.jpg", "https://i.imgur.com/qfLln70.jpg"))
-                        .lat(0)
-                        .lon(0)
-                        .distancePreference(5000)
-                        .passions(Arrays.asList(Passion.Astrology, Passion.DIY, Passion.Climbing))
-                        .about("Chúng ta của hiện tại")
-
-                        .roles(Arrays.asList("user"))
-                        .socketId(UUID.randomUUID().toString())
-
-                        .maxAge(70)
-                        .minAge(15)
-                        .lookingFor(Arrays.asList(Gender.FEMALE, Gender.MALE))
-                        .yearOfBirth(1982 +
-                                rand.nextInt(40))
-                        .build();
-
-                user = userRepository.save(build);
-                Faker faker;
-                faker = new Faker(new Locale("vi-VN"));
-
-                User user0 = User.builder()
-                        .id(UUID.randomUUID().toString())
-                        .fullName(faker.name().username())
-                        .lastSeenAt(System.nanoTime())
-                        .build();
 
 
-                User user1 = User.builder()
-                        .id(UUID.randomUUID().toString())
-                        .fullName(faker.name().username())
-                        .lastSeenAt(System.nanoTime()).
-                        build();
-
-/*
-                userRepository.save(user0);
-                userRepository.save(user1);
-
-
-                for (int i = 0; i < 3; i++) {
-                    String convId = chatService.createNewConversation(user, faker.university().name());
-                    chatService.inviteUserToConversation(user, user1, convId);
-                    chatService.inviteUserToConversation(user, user0, convId);
-
-
-                    chatService.sendMessage(user, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user0, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user1, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user1, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user0, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user1, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user, convId, faker.lorem().paragraph());
-
-                    chatService.sendMessage(user1, convId, faker.lorem().paragraph());
-
-                }
-
-
-
-*/
+                user =  userSer.createNewUser(email, name, pictureUrl);
 
             }
+
+            userSer.updateUserLocation(request.getLat(), request.getLon(), email);
 
             String token = jwtUtil.generateToken(user);
 
             return AuthenticationResponse.builder()
                     .jwt(token)
-                    .userId(user.getId())
-                    .username(email)
+                    .username(user.getUsername())
                     .fullName(user.getFullName())
                     .avatar(user.getAvatar())
                     .authorities(user.getAuthorities())

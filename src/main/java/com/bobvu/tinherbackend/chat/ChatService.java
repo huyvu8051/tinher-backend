@@ -10,7 +10,7 @@ public interface ChatService {
 
     String createNewConversation(User creator, String conversationName);
 
-    void inviteUserToConversation(User inviter, User invitee, String clusterKey);
+    void inviteUserToConversation(User inviter, User invitee, String conversationId);
 
     /**
      *  get all conversation

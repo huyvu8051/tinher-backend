@@ -1,6 +1,7 @@
 package com.bobvu.tinherbackend.setting;
 
 import com.bobvu.tinherbackend.cassandra.model.Gender;
+import com.bobvu.tinherbackend.cassandra.model.Image;
 import com.bobvu.tinherbackend.cassandra.model.Passion;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +13,7 @@ import java.util.List;
 public class UserSettingDTO {
 
     private String about;
-    private List<String> images;
+    private List<Image> images;
     private List<Passion> passions;
     private Gender gender;
     private List<Gender> lookingFor;

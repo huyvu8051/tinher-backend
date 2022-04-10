@@ -20,18 +20,18 @@ import java.util.UUID;
 public class User implements UserDetails {
 
     @Id
-    @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.PARTITIONED)
-    private String id;
+    @PrimaryKeyColumn(type = PrimaryKeyType.PARTITIONED)
+    private String username;
     private String fullName;
     private String password;
-    private String username;
+
     private String avatar;
     private long lastSeenAt;
 
     // description
     private String about;
 
-    private List<String> images;
+    private List<Image> images;
     private List<Passion> passions;
     private Gender gender;
 
@@ -63,7 +63,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return id;
+        return username;
     }
 
     @Override

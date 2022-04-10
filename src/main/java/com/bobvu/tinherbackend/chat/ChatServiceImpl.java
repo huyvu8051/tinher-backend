@@ -56,7 +56,7 @@ public class ChatServiceImpl implements ChatService {
 
         Member mem = Member.builder()
                 .memberShipStatus("creator")
-                .userId(creator.getId())
+                .username(creator.getUsername())
                 .fullName(creator.getFullName())
                 .build();
 
@@ -64,20 +64,20 @@ public class ChatServiceImpl implements ChatService {
         Conversation con = Conversation.builder()
                 .lastMessageTime(thisTime)
                 .conversationId(conversationId)
-                .userId(creator.getId())
+                .userId(creator.getUsername())
 
                 .build();
 
         conversationRepository.save(con);
 
         UserConversation userCon = UserConversation.builder()
-                .userId(creator.getId())
+                .userId(creator.getUsername())
                 .conversationId(conversationId)
                 .lastMessageTime(thisTime)
                 .conversationName(conversationName)
                 .lastMessage(lm)
                 .members(Arrays.asList(mem))
-                .memberIds(Arrays.asList(creator.getId()))
+                .memberIds(Arrays.asList(creator.getUsername()))
                 .build();
         userConversationRepository.save(userCon);
 
@@ -101,23 +101,23 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public void inviteUserToConversation(User inviter, User invitee, String conversationId) {
         log.info("==============inviteUserToConversation==============");
-        UserConversation uCon = userConversationRepository.findOneByUserIdAndConversationId(inviter.getId(), conversationId);
+        UserConversation uCon = userConversationRepository.findOneByUserIdAndConversationId(inviter.getUsername(), conversationId);
 
 
         List<Member> members = new ArrayList<>(uCon.getMembers());
 
         Member newMem = Member.builder()
-                .userId(invitee.getId())
+                .username(invitee.getUsername())
                 .fullName(invitee.getFullName())
                 .memberShipStatus("Member")
                 .build();
 
         members.add(newMem);
-        uCon.getMemberIds().add(invitee.getId());
+        uCon.getMemberIds().add(invitee.getUsername());
         userConversationRepository.save(uCon);
 
         // change user id to save another conversation of invitee
-        uCon.setUserId(invitee.getId());
+        uCon.setUserId(invitee.getUsername());
         userConversationRepository.save(uCon);
 
         Conversation con = Conversation.builder()
@@ -148,7 +148,7 @@ public class ChatServiceImpl implements ChatService {
                 .sentAt(thisTime)
                 .conversationId(conversationId)
                 .author(sender.getFullName())
-                .authorId(sender.getId())
+                .authorId(sender.getUsername())
                 .text(text).build();
 
 
@@ -159,7 +159,7 @@ public class ChatServiceImpl implements ChatService {
 
     private void sendConversationMessage(User sender, String conversationId, ChatMessage cm) {
         log.info("==============sendConversationMessage==============");
-        UserConversation ucon = userConversationRepository.findOneByUserIdAndConversationId(sender.getId(), conversationId);
+        UserConversation ucon = userConversationRepository.findOneByUserIdAndConversationId(sender.getUsername(), conversationId);
 
         List<String> userIds = new ArrayList<>(ucon.getMemberIds());
 

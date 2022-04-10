@@ -40,7 +40,7 @@ public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
                .antMatchers("/", "/csrf", "/authentication/**", "/swagger-resources/**", "/swagger-ui.html",
                        "/v2/api-docs", "/webjars/**", "/resources/**", "/index.html**", "/test**", "/socket.io/**", "/client.html**", "/client2.html**", "/uploads/**")
                .permitAll()
-               .antMatchers("/user/**").hasAuthority("user")
+
 
                .anyRequest().authenticated()
                 .and()

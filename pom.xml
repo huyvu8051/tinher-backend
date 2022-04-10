@@ -17,6 +17,16 @@
 		<java.version>1.8</java.version>
 	</properties>
 	<dependencies>
+
+		<!-- elastic search -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+		</dependency>
+
+
+
+
 		<!-- socket.io -->
 		<dependency>
 			<groupId>com.corundumstudio.socketio</groupId>
