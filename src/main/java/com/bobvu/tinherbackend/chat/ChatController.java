@@ -1,14 +1,12 @@
 package com.bobvu.tinherbackend.chat;
 
 import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
-import com.bobvu.tinherbackend.cassandra.model.Conversation;
 import com.bobvu.tinherbackend.cassandra.model.User;
 import com.bobvu.tinherbackend.cassandra.model.UserConversation;
-import com.datastax.oss.driver.api.core.cql.PagingState;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.cassandra.core.query.CassandraPageRequest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,16 +19,23 @@ public class ChatController {
     private ChatService chatSer;
 
     @GetMapping("/chatMessage")
-    public  ChatMessageInfo getAllChatMessage (@RequestParam String convId, @RequestParam int page){
+    public  ChatMessageInfo getAllChatMessage (@RequestParam String convId, @RequestParam int page, @RequestParam int size){
 
         int limit = page * 10;
 
-        List<ChatMessage> chatMess = chatSer.getAllChatMessageInConversation(convId, Pageable.ofSize(limit));
+        List<ChatMessage> chatMess = chatSer.getAllChatMessageInConversation(convId, page, size);
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         UserConversation con = chatSer.findConversationById(user.getUsername(), convId);
+
+
+        List<String> memberIds = con.getMemberIds();
+
+        List<UserAvatarUrl> userAvatarUrls = chatSer.getUserAvatarUrls(memberIds);
+
         return ChatMessageInfo.builder()
                 .chatMessages(chatMess)
                 .conversation(con)
+                .avatarUrls(userAvatarUrls)
                 .build();
     }
 
@@ -49,8 +54,11 @@ public class ChatController {
     public void sentMessage(@RequestBody SentMessageReq req){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        chatSer.sendMessage(user, req.getConversationId(), req.getChatMessage());
+        chatSer.sendMessage(user, req.getConversationId(), req.getChatMessage(), req.getSentAt());
     }
+
+
+
 
 
 }

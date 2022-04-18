@@ -6,6 +6,7 @@ import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 
 @UserDefinedType
 @Data
+@Builder
 public class ChatMessageType {
     private long sentAt;
     private String conversationId;
@@ -22,5 +23,8 @@ public class ChatMessageType {
         this.author = cm.getAuthor();
         this.authorId = cm.getAuthorId();
         this.text = cm.getText();
+    }
+
+    public ChatMessageType(long now, String converId, String bà_mối, String system, String s) {
     }
 }

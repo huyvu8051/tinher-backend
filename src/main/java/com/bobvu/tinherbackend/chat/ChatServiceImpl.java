@@ -104,6 +104,7 @@ public class ChatServiceImpl implements ChatService {
         UserConversation uCon = userConversationRepository.findOneByUserIdAndConversationId(inviter.getUsername(), conversationId);
 
 
+
         List<Member> members = new ArrayList<>(uCon.getMembers());
 
         Member newMem = Member.builder()
@@ -128,7 +129,8 @@ public class ChatServiceImpl implements ChatService {
 
         conversationRepository.save(con);
 
-        this.sendMessage(inviter, conversationId, inviter.getFullName() + " invited " + invitee.getFullName());
+
+        this.sendMessage(inviter, conversationId, inviter.getFullName() + " invited " + invitee.getFullName(), System.currentTimeMillis());
 
     }
 
@@ -138,10 +140,8 @@ public class ChatServiceImpl implements ChatService {
     }
 
 
-    public void sendMessage(User sender, String conversationId, String text) {
+    public void sendMessage(User sender, String conversationId, String text, long thisTime) {
         log.info("==============sendMessage==============");
-        long thisTime = System.currentTimeMillis();
-
 
         // save new chat message
         ChatMessage cm = ChatMessage.builder()
@@ -190,7 +190,7 @@ public class ChatServiceImpl implements ChatService {
 
                SocketIOClient client = server.getClient(UUID.fromString(u.getSocketId()));
                if(client != null){
-                   client.sendEvent("receiveMessage");
+                   client.sendEvent("receiveMessage",conversationId, cm);
                }
            }
        }
@@ -207,24 +207,44 @@ public class ChatServiceImpl implements ChatService {
 
         List<UserConversation> result = userConversationRepository.findAllByUserIdAndConversationIds(userId, cons);
 
-        result.sort((e1, e2)-> (int) (e2.getLastMessageTime() - e1.getLastMessageTime()));
-
         return result;
 
     }
 
     @Override
-    public List<ChatMessage> getAllChatMessageInConversation(String conversationId, Pageable pageable) {
+    public List<ChatMessage> getAllChatMessageInConversation(String conversationId, int page, int size) {
 
-        Slice<ChatMessage> allByConversationId = chatMessageRepository.findAllByConversationId(conversationId, pageable);
+        Slice<ChatMessage> slide = chatMessageRepository.findAllByConversationId(conversationId, Pageable.ofSize(page * size));
 
-        return allByConversationId.getContent();
+        List<ChatMessage> result = slide.stream().skip((page - 1) * size).collect(Collectors.toList());
+
+        return result;
     }
 
 
     @Override
     public void seenAMessage(User seenBy, ChatMessage chatMessage) {
 
+    }
+
+    @Override
+    public List<UserAvatarUrl> getUserAvatarUrls(List<String> userIds) {
+        List<User> users = userRepo.findAllById(userIds);
+        return users.stream().map(e->new UserAvatarUrl(e.getUsername(), e.getAvatar())).collect(Collectors.toList());
+    }
+
+    @Override
+    public String createNewConversation(User creator, User invitee) {
+        String converId = UUID.randomUUID().toString();
+        long now = System.currentTimeMillis();
+
+        ChatMessageType cmt = new  ChatMessageType(now, converId, "Bà mối", "System", "Bắt đầu nhắn tin nhia :3");
+
+        UserConversation uc0 = new UserConversation(creator.getUsername(),converId,now,invitee.getFullName(),cmt)
+
+// create conversation
+
+        return null;
     }
 
 

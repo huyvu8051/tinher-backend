@@ -13,5 +13,6 @@ import java.util.List;
 public class ChatMessageInfo {
     private List<ChatMessage> chatMessages;
     private UserConversation conversation;
+    private List<UserAvatarUrl> avatarUrls;
 
 }

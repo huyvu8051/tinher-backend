@@ -29,11 +29,11 @@ public interface ChatService {
      * @param pageable
      * @return
      */
-    List<ChatMessage> getAllChatMessageInConversation(String conversationId, Pageable pageable);
+    List<ChatMessage> getAllChatMessageInConversation(String conversationId, int page, int size);
 
 
 
-    void sendMessage(User sender, String conversationId,  String text);
+    void sendMessage(User sender, String conversationId,  String text, long sendAt);
 
     /**
      * seen a message in a conversation then everyone in conversation can know who has already read that message
@@ -42,4 +42,7 @@ public interface ChatService {
      */
     void seenAMessage(User seenBy, ChatMessage chatMessage);
 
+    List<UserAvatarUrl> getUserAvatarUrls(List<String> userIds);
+
+    String createNewConversation(User userDetails, User members);
 }

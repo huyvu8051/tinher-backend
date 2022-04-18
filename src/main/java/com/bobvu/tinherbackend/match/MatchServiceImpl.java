@@ -122,9 +122,11 @@ public class MatchServiceImpl implements MatchService {
 
     private void pairAndCreateConversation(com.bobvu.tinherbackend.cassandra.model.User userDetails, String partnerId) {
         com.bobvu.tinherbackend.cassandra.model.User partner = userRepository.findById(partnerId).orElseThrow(() -> new NullPointerException("Username not found"));
-        String converId = chatSer.createNewConversation(userDetails, "Conv between " + userDetails.getFullName() + " and " + partner.getFullName());
+        //String converId = chatSer.createNewConversation(userDetails, "Conv between " + userDetails.getFullName() + " and " + partner.getFullName());
+        //chatSer.inviteUserToConversation(userDetails, partner, converId);
 
-        chatSer.inviteUserToConversation(userDetails, partner, converId);
+
+        String converId2 = chatSer.createNewConversation(userDetails, partner);
         
     }
 
