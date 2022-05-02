@@ -7,10 +7,9 @@ import org.springframework.data.cassandra.core.mapping.UserDefinedType;
 @UserDefinedType
 @Builder
 @Data
-public class Member {
+public class Seener {
 
     private String username;
-    private String fullName;
-    private String memberShipStatus;
+    private long seenAt;
 
 }

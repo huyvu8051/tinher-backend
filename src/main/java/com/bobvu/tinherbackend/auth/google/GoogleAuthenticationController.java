@@ -2,13 +2,10 @@ package com.bobvu.tinherbackend.auth.google;
 
 import com.bobvu.tinherbackend.auth.JwtUtil;
 import com.bobvu.tinherbackend.auth.UserService;
-import com.bobvu.tinherbackend.cassandra.model.Gender;
-import com.bobvu.tinherbackend.cassandra.model.Passion;
 import com.bobvu.tinherbackend.cassandra.model.User;
-import com.bobvu.tinherbackend.cassandra.repository.ConversationRepository;
+import com.bobvu.tinherbackend.cassandra.repository.OrderedConversationRepository;
 import com.bobvu.tinherbackend.cassandra.repository.UserRepository;
 import com.bobvu.tinherbackend.chat.ChatService;
-import com.github.javafaker.Faker;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -40,7 +37,7 @@ public class GoogleAuthenticationController {
 
 
     @Autowired
-    private ConversationRepository userConversationRepository;
+    private OrderedConversationRepository userOrderedConversationRepository;
 
     private final UserRepository userRepository;
 

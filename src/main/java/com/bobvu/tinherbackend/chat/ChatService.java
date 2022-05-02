@@ -8,9 +8,8 @@ import java.util.List;
 public interface ChatService {
     UserConversation findConversationById(String userId, String conversationId);
 
-    String createNewConversation(User creator, String conversationName);
 
-    void inviteUserToConversation(User inviter, User invitee, String conversationId);
+
 
     /**
      *  get all conversation
@@ -25,8 +24,7 @@ public interface ChatService {
 
     /** get all chat message in conversation
      *
-     * @param conversationId
-     * @param pageable
+
      * @return
      */
     List<ChatMessage> getAllChatMessageInConversation(String conversationId, int page, int size);
@@ -38,11 +36,14 @@ public interface ChatService {
     /**
      * seen a message in a conversation then everyone in conversation can know who has already read that message
      *
-     * @param chatMessage
+     * @param sentAt
      */
-    void seenAMessage(User seenBy, ChatMessage chatMessage);
+    void seenAMessage(User seenBy,String convId, long sentAt);
 
-    List<UserAvatarUrl> getUserAvatarUrls(List<String> userIds);
 
     String createNewConversation(User userDetails, User members);
+
+    List<ChatMessage> findAllLastMessage(List<String> converIds);
+
+    List<User> getAllUserByConversationIds(List<String> partnerIds);
 }

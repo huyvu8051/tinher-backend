@@ -23,7 +23,6 @@ public class User implements UserDetails {
     @PrimaryKeyColumn(type = PrimaryKeyType.PARTITIONED)
     private String username;
     private String fullName;
-    private String password;
 
     private String avatar;
     private long lastSeenAt;
@@ -58,7 +57,7 @@ public class User implements UserDetails {
 
     @Override
     public String getPassword() {
-        return password;
+        return "";
     }
 
     @Override

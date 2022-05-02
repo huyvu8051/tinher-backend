@@ -17,16 +17,10 @@ public class UserConversation {
     @PrimaryKeyColumn(type = PrimaryKeyType.CLUSTERED)
     private String conversationId;
 
+    private String partnerId;//
+
     private long lastMessageTime;
 
 
-    private String conversationName;//
 
-
-    private ChatMessageType lastMessage;
-
-
-    private List<Member> members;//
-
-    private List<String> memberIds;
 }

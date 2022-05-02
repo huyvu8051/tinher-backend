@@ -1,10 +1,7 @@
 package com.bobvu.tinherbackend.chat;
 
 import com.bobvu.tinherbackend.cassandra.model.*;
-import com.bobvu.tinherbackend.cassandra.repository.ChatMessageRepository;
-import com.bobvu.tinherbackend.cassandra.repository.ConversationRepository;
-import com.bobvu.tinherbackend.cassandra.repository.UserConversationRepository;
-import com.bobvu.tinherbackend.cassandra.repository.UserRepository;
+import com.bobvu.tinherbackend.cassandra.repository.*;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.github.javafaker.Faker;
@@ -13,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import sun.plugin2.message.Conversation;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,66 +29,16 @@ public class ChatServiceImpl implements ChatService {
     private ChatMessageRepository chatMessageRepository;
 
     @Autowired
-    private ConversationRepository conversationRepository;
+    private OrderedConversationRepository orderedConverRepo;
     @Autowired
-    private UserConversationRepository userConversationRepository;
+    private UserConversationRepository usrConRepo;
 
     Faker faker = new Faker(new Locale("vi-VN"));
 
-    @Override
-    public String createNewConversation(User creator, String conversationName) {
-
-        log.info("==============createNewConversation==============");
-        long thisTime = System.currentTimeMillis();
-
-        String conversationId = generateConversationId();
-
-
-
-
-        ChatMessageType lm = new ChatMessageType();
-
-        lm.setSentAt(thisTime);
-        lm.setAuthor(creator.getFullName());
-        lm.setText("You create a new conversation");
-
-        Member mem = Member.builder()
-                .memberShipStatus("creator")
-                .username(creator.getUsername())
-                .fullName(creator.getFullName())
-                .build();
-
-
-        Conversation con = Conversation.builder()
-                .lastMessageTime(thisTime)
-                .conversationId(conversationId)
-                .userId(creator.getUsername())
-
-                .build();
-
-        conversationRepository.save(con);
-
-        UserConversation userCon = UserConversation.builder()
-                .userId(creator.getUsername())
-                .conversationId(conversationId)
-                .lastMessageTime(thisTime)
-                .conversationName(conversationName)
-                .lastMessage(lm)
-                .members(Arrays.asList(mem))
-                .memberIds(Arrays.asList(creator.getUsername()))
-                .build();
-        userConversationRepository.save(userCon);
-
-
-        this.inviteUserToConversation(creator, creator, conversationId);
-
-        return conversationId;
-
-    }
 
     public UserConversation findConversationById(String userId, String conversationId) {
 
-        UserConversation uc = userConversationRepository.findOneByUserIdAndConversationId(userId, conversationId);
+        UserConversation uc = usrConRepo.findOneByUserIdAndConversationId(userId, conversationId).orElseThrow(() -> new NullPointerException("Conversation not found"));
 
 
         return uc;
@@ -98,102 +46,82 @@ public class ChatServiceImpl implements ChatService {
     }
 
 
-    @Override
-    public void inviteUserToConversation(User inviter, User invitee, String conversationId) {
-        log.info("==============inviteUserToConversation==============");
-        UserConversation uCon = userConversationRepository.findOneByUserIdAndConversationId(inviter.getUsername(), conversationId);
-
-
-
-        List<Member> members = new ArrayList<>(uCon.getMembers());
-
-        Member newMem = Member.builder()
-                .username(invitee.getUsername())
-                .fullName(invitee.getFullName())
-                .memberShipStatus("Member")
-                .build();
-
-        members.add(newMem);
-        uCon.getMemberIds().add(invitee.getUsername());
-        userConversationRepository.save(uCon);
-
-        // change user id to save another conversation of invitee
-        uCon.setUserId(invitee.getUsername());
-        userConversationRepository.save(uCon);
-
-        Conversation con = Conversation.builder()
-                .userId(uCon.getUserId())
-                .conversationId(uCon.getConversationId())
-                .lastMessageTime(uCon.getLastMessageTime())
-                .build();
-
-        conversationRepository.save(con);
-
-
-        this.sendMessage(inviter, conversationId, inviter.getFullName() + " invited " + invitee.getFullName(), System.currentTimeMillis());
-
-    }
-
-
-    private String generateConversationId() {
-        return UUID.randomUUID().toString();
-    }
-
-
     public void sendMessage(User sender, String conversationId, String text, long thisTime) {
+        ChatMessage cm = saveNewChatMessage(sender, conversationId, text, thisTime);
+
+        UserConversation uc = updateOrderedConversations(sender.getUsername(), conversationId, thisTime);
+
+        User partner = userRepo.findById(uc.getPartnerId()).orElseThrow(() -> new NullPointerException("Partner not found"));
+
+
+        noticeMessageViaSocket(conversationId, sender.getSocketId(), partner.getSocketId(), cm);
+    }
+
+    private ChatMessage saveNewChatMessage(User sender, String conversationId, String text, long thisTime) {
         log.info("==============sendMessage==============");
 
+        Seener seener = Seener.builder()
+                .username(sender.getUsername())
+                .seenAt(thisTime)
+                .build();
+
+        Set<Seener> seeners = new HashSet<>();
+
+        seeners.add(seener);
+
         // save new chat message
+
+        CMKey key = new CMKey(thisTime, conversationId);
+
         ChatMessage cm = ChatMessage.builder()
-                .sentAt(thisTime)
-                .conversationId(conversationId)
+                .key(key)
                 .author(sender.getFullName())
                 .authorId(sender.getUsername())
-                .text(text).build();
+                .seeners(seeners)
+                .text(text)
+                .build();
 
 
-        chatMessageRepository.save(cm);
-
-        sendConversationMessage(sender, conversationId, cm);
+        return chatMessageRepository.save(cm);
     }
 
-    private void sendConversationMessage(User sender, String conversationId, ChatMessage cm) {
-        log.info("==============sendConversationMessage==============");
-        UserConversation ucon = userConversationRepository.findOneByUserIdAndConversationId(sender.getUsername(), conversationId);
+    private UserConversation updateOrderedConversations(String senderId, String conversationId, long thisTime) {
+        log.info("==============updateOrderedConversations==============");
+        UserConversation userCon = usrConRepo.findOneByUserIdAndConversationId(senderId, conversationId).orElseThrow(() -> new NullPointerException("Conversation not found"));
 
-        List<String> userIds = new ArrayList<>(ucon.getMemberIds());
+        OrderedConversation o1 = OrderedConversation.builder()
+                .conversationId(conversationId)
+                .lastMessageTime(thisTime)
+                .userId(senderId)
 
-        long thisTime = System.currentTimeMillis();
+                .build();
 
-        ChatMessageType cmt = new ChatMessageType(cm);
+        OrderedConversation o2 = OrderedConversation.builder()
+                .conversationId(conversationId)
+                .lastMessageTime(thisTime)
+                .userId(userCon.getPartnerId())
+                .build();
 
-        userConversationRepository.updateLastMessageTime(userIds, conversationId, thisTime, cmt);
+        orderedConverRepo.saveAll(Arrays.asList(o1, o2));
+        orderedConverRepo.deleteAllByIdsAndLastMessageTime(Arrays.asList(senderId, userCon.getPartnerId()), userCon.getLastMessageTime());
 
-        List<Conversation> cons = new ArrayList<>();
-        for(String id : userIds){
-            cons.add(Conversation.builder()
-                            .conversationId(conversationId)
-                            .userId(id)
-                            .lastMessageTime(thisTime)
-                    .build());
-        }
-
-        conversationRepository.saveAll(cons);
-        conversationRepository.deleteAllByIdsAndLastMessageTime(userIds, ucon.getLastMessageTime());
+        usrConRepo.updateLastMessageTime(Arrays.asList(senderId, userCon.getPartnerId()), conversationId, thisTime);
 
 
+        return userCon;
 
-       List<User> users = userRepo.findAllById(userIds);
+    }
 
-       for(User u : users){
-           if(u.getSocketId() != null){
+    private void noticeMessageViaSocket(String converId, String senderSocketId, String partnerSocketId, ChatMessage cm) {
 
-               SocketIOClient client = server.getClient(UUID.fromString(u.getSocketId()));
-               if(client != null){
-                   client.sendEvent("receiveMessage",conversationId, cm);
-               }
-           }
-       }
+
+        SocketIOClient client1 = server.getClient(UUID.fromString(senderSocketId));
+        client1.sendEvent("receiveMessage", converId, cm);
+
+        SocketIOClient client2 = server.getClient(UUID.fromString(partnerSocketId));
+        client2.sendEvent("receiveMessage", converId, cm);
+
+
     }
 
 
@@ -201,11 +129,11 @@ public class ChatServiceImpl implements ChatService {
     public List<UserConversation> getAllConversation(String userId, Pageable pageable) {
 
 
-        Slice<Conversation> userCons = conversationRepository.findAllByUserId(userId, pageable);
+        Slice<OrderedConversation> userCons = orderedConverRepo.findAllByUserId(userId, pageable);
 
         List<String> cons = userCons.stream().map(e -> e.getConversationId()).collect(Collectors.toList());
 
-        List<UserConversation> result = userConversationRepository.findAllByUserIdAndConversationIds(userId, cons);
+        List<UserConversation> result = usrConRepo.findAllByUserIdAndConversationIds(userId, cons);
 
         return result;
 
@@ -223,14 +151,42 @@ public class ChatServiceImpl implements ChatService {
 
 
     @Override
-    public void seenAMessage(User seenBy, ChatMessage chatMessage) {
+    public void seenAMessage(User seenBy, String convId, long sentAt) {
+
+        ChatMessage cm = chatMessageRepository.findOneById(convId, sentAt).orElseThrow(() -> new NullPointerException("ChatMessage not found"));
+
+        Seener seener = Seener.builder()
+                .username(seenBy.getUsername())
+                .seenAt(System.currentTimeMillis())
+                .build();
+
+        cm.getSeeners().add(seener);
+        chatMessageRepository.save(cm);
+
+    }
+
+
+    @Override
+    public List<ChatMessage> findAllLastMessage(List<String> converIds) {
+
+        List<UserConversation> convers = usrConRepo.findAllByUserId(converIds);
+
+        List<String> ids = convers.stream().map(e -> e.getConversationId()).collect(Collectors.toList());
+
+        List<Long> lastMessTimes = convers.stream().map(e -> e.getLastMessageTime()).collect(Collectors.toList());
+
+
+        return chatMessageRepository.findAllLastMessage(ids, lastMessTimes);
 
     }
 
     @Override
-    public List<UserAvatarUrl> getUserAvatarUrls(List<String> userIds) {
+    public List<User> getAllUserByConversationIds( List<String> userIds) {
+
+
         List<User> users = userRepo.findAllById(userIds);
-        return users.stream().map(e->new UserAvatarUrl(e.getUsername(), e.getAvatar())).collect(Collectors.toList());
+
+        return users;
     }
 
     @Override
@@ -238,13 +194,41 @@ public class ChatServiceImpl implements ChatService {
         String converId = UUID.randomUUID().toString();
         long now = System.currentTimeMillis();
 
-        ChatMessageType cmt = new  ChatMessageType(now, converId, "Bà mối", "System", "Bắt đầu nhắn tin nhia :3");
+        UserConversation uc0 = UserConversation.builder()
+                .userId(creator.getUsername())
+                .conversationId(converId)
+                .partnerId(invitee.getUsername())
+                .lastMessageTime(now)
+                .build();
 
-        UserConversation uc0 = new UserConversation(creator.getUsername(),converId,now,invitee.getFullName(),cmt)
+        UserConversation uc1 = UserConversation.builder()
+                .userId(invitee.getUsername())
+                .conversationId(converId)
+                .partnerId(creator.getUsername())
+                .lastMessageTime(now)
+                .build();
 
-// create conversation
 
-        return null;
+        usrConRepo.saveAll(Arrays.asList(uc1, uc0));
+
+        OrderedConversation con0 = OrderedConversation.builder()
+                .lastMessageTime(now)
+                .userId(creator.getUsername())
+                .conversationId(converId)
+                .build();
+
+        OrderedConversation con1 = OrderedConversation.builder()
+                .lastMessageTime(now)
+                .userId(invitee.getUsername())
+                .conversationId(converId)
+                .build();
+
+
+        orderedConverRepo.saveAll(Arrays.asList(con0, con1));
+
+        this.sendMessage(creator, converId, creator.getFullName() + " create a conversation with " + invitee.getFullName(), now + 1);
+
+        return converId;
     }
 
 

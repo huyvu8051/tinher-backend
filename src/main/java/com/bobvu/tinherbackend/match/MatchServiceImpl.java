@@ -4,7 +4,9 @@ import com.bobvu.tinherbackend.cassandra.mapper.UserMapper;
 import com.bobvu.tinherbackend.cassandra.model.Gender;
 import com.bobvu.tinherbackend.cassandra.model.Liked;
 import com.bobvu.tinherbackend.cassandra.model.Passion;
+import com.bobvu.tinherbackend.cassandra.model.UserConversation;
 import com.bobvu.tinherbackend.cassandra.repository.LikedRepository;
+import com.bobvu.tinherbackend.cassandra.repository.UserConversationRepository;
 import com.bobvu.tinherbackend.cassandra.repository.UserRepository;
 import com.bobvu.tinherbackend.chat.ChatService;
 import com.bobvu.tinherbackend.elasticsearch.User;
@@ -17,17 +19,18 @@ import org.elasticsearch.index.query.MatchQueryBuilder;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.query.functionscore.ScriptScoreQueryBuilder;
 import org.elasticsearch.script.Script;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.data.elasticsearch.core.query.Query;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,14 +100,31 @@ public class MatchServiceImpl implements MatchService {
 
     }
 
+    @Autowired
+    private UserConversationRepository userConRepo;
+
     @Override
     public void likePartner(com.bobvu.tinherbackend.cassandra.model.User userDetails, LikePartnerRequest request) {
+
+        if(userDetails.getUsername().equalsIgnoreCase(request.getPartnerId())){
+            return;
+        }
+
         boolean present = likedRepo.findOneById(request.getPartnerId(), userDetails.getUsername()).isPresent();
 
-        if(present){
-            this.pairAndCreateConversation(userDetails, request.getPartnerId());
-        }else {
+        if(!present){
             this.createLikedPartner(userDetails, request.getPartnerId());
+
+
+
+        }else {
+            String converId =  userDetails.getUsername() + request.getPartnerId();
+            Optional<UserConversation> conver = userConRepo.findOneByUserIdAndConversationId(userDetails.getUsername(), converId);
+
+
+            if(!conver.isPresent()){
+                this.pairAndCreateConversation(userDetails, request.getPartnerId());
+            }
         }
     }
 
@@ -124,6 +144,10 @@ public class MatchServiceImpl implements MatchService {
         com.bobvu.tinherbackend.cassandra.model.User partner = userRepository.findById(partnerId).orElseThrow(() -> new NullPointerException("Username not found"));
         //String converId = chatSer.createNewConversation(userDetails, "Conv between " + userDetails.getFullName() + " and " + partner.getFullName());
         //chatSer.inviteUserToConversation(userDetails, partner, converId);
+
+
+
+
 
 
         String converId2 = chatSer.createNewConversation(userDetails, partner);
