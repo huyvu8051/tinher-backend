@@ -2,25 +2,21 @@ package com.bobvu.tinherbackend.cassandra.model;
 
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.cassandra.core.cql.PrimaryKeyType;
 import org.springframework.data.cassandra.core.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.core.mapping.Table;
 
-import java.util.List;
+import java.util.Set;
 
 @Table
 @Data
 @Builder
-public class UserConversation {
+public class Conversation {
+    @Id
     @PrimaryKeyColumn(type = PrimaryKeyType.PARTITIONED)
-    private String userId;
-    @PrimaryKeyColumn(type = PrimaryKeyType.CLUSTERED)
     private String conversationId;
-
-    private String partnerId;//
-
+    private Set<Member> members;
     private long lastMessageTime;
-
-
 
 }

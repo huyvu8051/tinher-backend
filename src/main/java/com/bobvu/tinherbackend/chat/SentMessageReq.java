@@ -6,5 +6,6 @@ import lombok.Data;
 public class SentMessageReq {
     private String conversationId;
     private String chatMessage;
+    private long sentAt;
 
 }

@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface ChatService {
-    UserConversation findConversationById(String userId, String conversationId);
+    Conversation findConversationById(String userId, String conversationId);
 
 
 
@@ -20,7 +20,7 @@ public interface ChatService {
      */
 
 
-    List<UserConversation> getAllConversation(String userId, Pageable pageable);
+    List<Conversation> getAllConversation(String userId, Pageable pageable);
 
     /** get all chat message in conversation
      *
@@ -43,7 +43,7 @@ public interface ChatService {
 
     String createNewConversation(User userDetails, User members);
 
-    List<ChatMessage> findAllLastMessage(List<String> converIds);
+    List<ChatMessage> findAllLastMessage(List<Conversation> orderedConvers);
 
-    List<User> getAllUserByConversationIds(List<String> partnerIds);
+    List<User> getAllUserByConversations(List<Conversation> conversations);
 }

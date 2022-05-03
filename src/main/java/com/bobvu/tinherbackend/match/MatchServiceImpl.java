@@ -4,9 +4,9 @@ import com.bobvu.tinherbackend.cassandra.mapper.UserMapper;
 import com.bobvu.tinherbackend.cassandra.model.Gender;
 import com.bobvu.tinherbackend.cassandra.model.Liked;
 import com.bobvu.tinherbackend.cassandra.model.Passion;
-import com.bobvu.tinherbackend.cassandra.model.UserConversation;
+import com.bobvu.tinherbackend.cassandra.model.Conversation;
 import com.bobvu.tinherbackend.cassandra.repository.LikedRepository;
-import com.bobvu.tinherbackend.cassandra.repository.UserConversationRepository;
+import com.bobvu.tinherbackend.cassandra.repository.ConversationRepository;
 import com.bobvu.tinherbackend.cassandra.repository.UserRepository;
 import com.bobvu.tinherbackend.chat.ChatService;
 import com.bobvu.tinherbackend.elasticsearch.User;
@@ -101,7 +101,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Autowired
-    private UserConversationRepository userConRepo;
+    private ConversationRepository userConRepo;
 
     @Override
     public void likePartner(com.bobvu.tinherbackend.cassandra.model.User userDetails, LikePartnerRequest request) {
@@ -113,24 +113,19 @@ public class MatchServiceImpl implements MatchService {
         boolean present = likedRepo.findOneById(request.getPartnerId(), userDetails.getUsername()).isPresent();
 
         if(!present){
-            this.createLikedPartner(userDetails, request.getPartnerId());
+            this.createLikedPartner(userDetails.getUsername(), request.getPartnerId());
 
 
 
         }else {
-            String converId =  userDetails.getUsername() + request.getPartnerId();
-            Optional<UserConversation> conver = userConRepo.findOneByUserIdAndConversationId(userDetails.getUsername(), converId);
-
-
-            if(!conver.isPresent()){
-                this.pairAndCreateConversation(userDetails, request.getPartnerId());
-            }
+            this.createLikedPartner( request.getPartnerId(), userDetails.getUsername());
+            this.pairAndCreateConversation(userDetails, request.getPartnerId());
         }
     }
 
-    private void createLikedPartner(com.bobvu.tinherbackend.cassandra.model.User userDetails, String partnerId) {
+    private void createLikedPartner(String userId, String partnerId) {
         Liked l = Liked.builder()
-                .username(userDetails.getUsername())
+                .username(userId)
                 .likedTargetId(partnerId)
                 .build();
 

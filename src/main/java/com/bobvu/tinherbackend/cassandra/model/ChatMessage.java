@@ -16,7 +16,6 @@ import java.util.Set;
 public class ChatMessage {
     @PrimaryKey
     private CMKey key;
-    private String author;
     private String authorId;
     private String text;
     private Set<Seener> seeners = new HashSet<>();

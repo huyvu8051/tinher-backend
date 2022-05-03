@@ -1,9 +1,8 @@
 package com.bobvu.tinherbackend.chat;
 
-import com.bobvu.tinherbackend.cassandra.model.CMKey;
 import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
 import com.bobvu.tinherbackend.cassandra.model.User;
-import com.bobvu.tinherbackend.cassandra.model.UserConversation;
+import com.bobvu.tinherbackend.cassandra.model.Conversation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -20,16 +20,16 @@ public class ChatController {
     private ChatService chatSer;
 
     @GetMapping("/chatMessage")
-    public ChatMessageInfo getAllChatMessage( @RequestParam String convId, @RequestParam int page, @RequestParam int size) {
+    public ChatMessageInfo getAllChatMessage( @RequestParam String convId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "8") int size) {
 
-        int limit = page * 10;
+        int limit = page * 20;
 
         List<ChatMessage> chatMess = chatSer.getAllChatMessageInConversation(convId, page, size);
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UserConversation con = chatSer.findConversationById(user.getUsername(), convId);
+        Conversation con = chatSer.findConversationById(user.getUsername(), convId);
 
 
-        List<User> users = chatSer.getAllUserByConversationIds(Arrays.asList(con.getConversationId()));
+        List<User> users = chatSer.getAllUserByConversations(Arrays.asList(con));
 
 
         return ChatMessageInfo.builder()
@@ -42,14 +42,13 @@ public class ChatController {
     @GetMapping("/conversations")
     public GetListConverRes getAllConversations() {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        List<UserConversation> allConversation = chatSer.getAllConversation(user.getUsername(), PageRequest.of(0, 10));
+        List<Conversation> allConversation = chatSer.getAllConversation(user.getUsername(), PageRequest.of(0, 10));
 
-        List<String> partnerIds = allConversation.stream().map(e -> e.getPartnerId()).collect(Collectors.toList());
+        List<String> partnerIds = allConversation.stream().map(e -> e.getMembers()).flatMap(Set::stream).map(e -> e.getUserId()).collect(Collectors.toList());
 
-        List<String> converIds = allConversation.stream().map(e -> e.getConversationId()).collect(Collectors.toList());
-        List<User> users = chatSer.getAllUserByConversationIds(partnerIds);
+        List<User> users = chatSer.getAllUserByConversations(allConversation);
 
-        List<ChatMessage> lastMessages = chatSer.findAllLastMessage(converIds);
+        List<ChatMessage> lastMessages = chatSer.findAllLastMessage(allConversation);
 
         return GetListConverRes.builder()
                 .conversations(allConversation)
@@ -64,7 +63,7 @@ public class ChatController {
     public void sentMessage(@RequestBody SentMessageReq req) {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        chatSer.sendMessage(user, req.getConversationId(), req.getChatMessage(), System.currentTimeMillis());
+        chatSer.sendMessage(user, req.getConversationId(), req.getChatMessage(), req.getSentAt());
     }
 
     @PostMapping("/seenMessage")
