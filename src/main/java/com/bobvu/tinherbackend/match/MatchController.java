@@ -19,7 +19,7 @@ private final ChatService chatService;
 
 
     @PostMapping
-    public ResponseEntity<PageResponse<ProfileResponse>> findAllSuitablePerson(@RequestBody FindSuitablePersonRequest request){
+    public ResponseEntity<PageResponse<User>> findAllSuitablePerson(@RequestBody FindSuitablePersonRequest request){
         User userDetails = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         return ResponseEntity.ok(matchService.findAllSuitablePerson(userDetails, request));
@@ -29,6 +29,13 @@ private final ChatService chatService;
     public ResponseEntity findAllSuitablePerson(@RequestBody LikePartnerRequest request){
         User userDetails = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         matchService.likePartner(userDetails, request);
+        return  ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/boost")
+    public ResponseEntity boost(){
+        User userDetails = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        matchService.boost(userDetails);
         return  ResponseEntity.ok().build();
     }
 }

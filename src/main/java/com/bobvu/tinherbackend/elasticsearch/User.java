@@ -23,14 +23,11 @@ public class User {
 
     @Id
     private String username;
-    private String fullName;
-    private String avatar;
-    private long lastSeenAt;
-    private String about;
 
-    private List<Image> images;
     private List<Passion> passions;
     private Gender gender;
+
+    private long boostTime;
 
     @GeoPointField
     private GeoPoint location;

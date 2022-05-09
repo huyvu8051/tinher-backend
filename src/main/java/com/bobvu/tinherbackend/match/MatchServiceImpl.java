@@ -4,7 +4,6 @@ import com.bobvu.tinherbackend.cassandra.mapper.UserMapper;
 import com.bobvu.tinherbackend.cassandra.model.Gender;
 import com.bobvu.tinherbackend.cassandra.model.Liked;
 import com.bobvu.tinherbackend.cassandra.model.Passion;
-import com.bobvu.tinherbackend.cassandra.model.Conversation;
 import com.bobvu.tinherbackend.cassandra.repository.LikedRepository;
 import com.bobvu.tinherbackend.cassandra.repository.ConversationRepository;
 import com.bobvu.tinherbackend.cassandra.repository.UserRepository;
@@ -13,10 +12,7 @@ import com.bobvu.tinherbackend.elasticsearch.User;
 import com.bobvu.tinherbackend.elasticsearch.UserESRepository;
 import lombok.AllArgsConstructor;
 import org.elasticsearch.common.unit.DistanceUnit;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.GeoDistanceQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.functionscore.ScriptScoreQueryBuilder;
 import org.elasticsearch.script.Script;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +24,7 @@ import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilde
 import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,7 +42,7 @@ public class MatchServiceImpl implements MatchService {
 
 
     @Override
-    public PageResponse<ProfileResponse> findAllSuitablePerson(com.bobvu.tinherbackend.cassandra.model.User user, FindSuitablePersonRequest request) {
+    public PageResponse<com.bobvu.tinherbackend.cassandra.model.User> findAllSuitablePerson(com.bobvu.tinherbackend.cassandra.model.User user, FindSuitablePersonRequest request) {
 
         GeoDistanceQueryBuilder geoDistanceQueryBuilder = new GeoDistanceQueryBuilder("location").distance(user.getDistancePreference() + "", DistanceUnit.KILOMETERS).point(request.getLat(), request.getLon());
 
@@ -57,42 +51,55 @@ public class MatchServiceImpl implements MatchService {
         RangeQueryBuilder rangeQueryBuilder = new RangeQueryBuilder("yearOfBirth").gte(year - user.getMaxAge()).lte(year - user.getMinAge());
 
 
-        BoolQueryBuilder boolQueryBuilderGender = new BoolQueryBuilder();
+        BoolQueryBuilder genderBoolQuery = new BoolQueryBuilder();
 
         if (user.getLookingFor() != null) {
             for (Gender gender : user.getLookingFor()) {
-                boolQueryBuilderGender.should(new MatchQueryBuilder("gender", gender));
+                genderBoolQuery.should(new MatchQueryBuilder("gender", gender));
             }
         }
 
+        List<Liked> likeds = likedRepo.findAllLikedTargetId(user.getUsername());
+
+        List<String> ignoreIds = likeds.stream().map(e -> e.getLikedTargetId()).collect(Collectors.toList());
+
+        ignoreIds.add(user.getUsername());
+
+        QueryBuilder mnTerms = new TermsQueryBuilder("_id", ignoreIds);
+        BoolQueryBuilder mustNotInIds = new BoolQueryBuilder();
+        mustNotInIds.mustNot(mnTerms);
+
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder()
                 .filter(geoDistanceQueryBuilder)
-                .filter(boolQueryBuilderGender)
+                .filter(genderBoolQuery)
                 .filter(rangeQueryBuilder)
+                .filter(mustNotInIds)
                 .minimumShouldMatch(1);
 
         for (Passion passion : user.getPassions()) {
             boolQueryBuilder.should(new MatchQueryBuilder("passions", passion));
         }
 
+
         // random score
-        Script script = new Script("Math.random()");
+        Script script = new Script("if(System.currentTimeMillis() <= doc['boostTime'].value)return 1 + Math.random() ;else return Math.random();");
 
         ScriptScoreQueryBuilder randomQuery = new ScriptScoreQueryBuilder(boolQueryBuilder, script);
 
-
-        Pageable pageable = Pageable.ofSize(5);
-
+        Pageable pageable = Pageable.ofSize(7);
 
         Query searchQuery = new NativeSearchQueryBuilder().withQuery(randomQuery).build().setPageable(pageable);
 
         SearchHits<User> searchHits = esOperations.search(searchQuery, User.class, IndexCoordinates.of("user"));
 
         long totalHits = searchHits.getTotalHits();
-        List<ProfileResponse> collect = searchHits.get().map(e -> userMapper.toProfileResponse(e.getContent())).collect(Collectors.toList());
 
-        PageResponse<ProfileResponse> response = new PageResponse<>();
-        response.setList(collect);
+        List<String> ids = searchHits.get().map(e -> e.getContent().getUsername()).collect(Collectors.toList());
+
+        List<com.bobvu.tinherbackend.cassandra.model.User> users = userRepository.findAllById(ids);
+
+        PageResponse<com.bobvu.tinherbackend.cassandra.model.User> response = new PageResponse<>();
+        response.setList(users);
         response.setTotalElement(totalHits);
 
         return response;
@@ -123,10 +130,30 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
+    final long THIRTY_MINUTE = 30 * 60 * 1000;
+
+    @Override
+    public void boost(com.bobvu.tinherbackend.cassandra.model.User userDetails) {
+        long now = System.currentTimeMillis();
+
+        User u = userESRepository.findById(userDetails.getUsername()).orElseThrow(() -> new NullPointerException("User not found"));
+        u.setBoostTime(now + THIRTY_MINUTE);
+
+        userESRepository.save(u);
+
+        userDetails.setBoostTime(now + THIRTY_MINUTE);
+
+        userRepository.save(userDetails);
+
+
+
+    }
+
     private void createLikedPartner(String userId, String partnerId) {
         Liked l = Liked.builder()
                 .username(userId)
                 .likedTargetId(partnerId)
+                .createTime(System.currentTimeMillis())
                 .build();
 
         likedRepo.save(l);
@@ -137,13 +164,6 @@ public class MatchServiceImpl implements MatchService {
 
     private void pairAndCreateConversation(com.bobvu.tinherbackend.cassandra.model.User userDetails, String partnerId) {
         com.bobvu.tinherbackend.cassandra.model.User partner = userRepository.findById(partnerId).orElseThrow(() -> new NullPointerException("Username not found"));
-        //String converId = chatSer.createNewConversation(userDetails, "Conv between " + userDetails.getFullName() + " and " + partner.getFullName());
-        //chatSer.inviteUserToConversation(userDetails, partner, converId);
-
-
-
-
-
 
         String converId2 = chatSer.createNewConversation(userDetails, partner);
         

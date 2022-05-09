@@ -29,14 +29,7 @@ public class UserMapperImpl implements UserMapper {
         ProfileResponse profileResponse = new ProfileResponse();
 
         profileResponse.setUsername( entity.getUsername() );
-        profileResponse.setFullName( entity.getFullName() );
-        profileResponse.setAvatar( entity.getAvatar() );
-        profileResponse.setLastSeenAt( entity.getLastSeenAt() );
-        profileResponse.setAbout( entity.getAbout() );
-        List<Image> list = entity.getImages();
-        if ( list != null ) {
-            profileResponse.setImages( new ArrayList<Image>( list ) );
-        }
+
         List<Passion> list1 = entity.getPassions();
         if ( list1 != null ) {
             profileResponse.setPassions( new ArrayList<Passion>( list1 ) );
@@ -120,22 +113,7 @@ public class UserMapperImpl implements UserMapper {
         GeoPoint gp = new GeoPoint(request.getLat(), request.getLon());
         user.setLocation(gp);
 
-        if ( request.getAbout() != null ) {
-            user.setAbout( request.getAbout() );
-        }
-        if ( user.getImages() != null ) {
-            List<Image> list = request.getImages();
-            if ( list != null ) {
-                user.getImages().clear();
-                user.getImages().addAll( list );
-            }
-        }
-        else {
-            List<Image> list = request.getImages();
-            if ( list != null ) {
-                user.setImages( new ArrayList<Image>( list ) );
-            }
-        }
+
         if ( user.getPassions() != null ) {
             List<Passion> list1 = request.getPassions();
             if ( list1 != null ) {
@@ -172,14 +150,7 @@ public class UserMapperImpl implements UserMapper {
         user1.location(geoPoint);
 
         user1.username( user.getUsername() );
-        user1.fullName( user.getFullName() );
-        user1.avatar( user.getAvatar() );
-        user1.lastSeenAt( user.getLastSeenAt() );
-        user1.about( user.getAbout() );
-        List<Image> list = user.getImages();
-        if ( list != null ) {
-            user1.images( new ArrayList<Image>( list ) );
-        }
+
         List<Passion> list1 = user.getPassions();
         if ( list1 != null ) {
             user1.passions( new ArrayList<Passion>( list1 ) );

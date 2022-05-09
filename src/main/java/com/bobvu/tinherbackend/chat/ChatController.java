@@ -1,8 +1,8 @@
 package com.bobvu.tinherbackend.chat;
 
 import com.bobvu.tinherbackend.cassandra.model.ChatMessage;
-import com.bobvu.tinherbackend.cassandra.model.User;
 import com.bobvu.tinherbackend.cassandra.model.Conversation;
+import com.bobvu.tinherbackend.cassandra.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,16 +21,13 @@ public class ChatController {
 
     @GetMapping("/chatMessage")
     public ChatMessageInfo getAllChatMessage( @RequestParam String convId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "8") int size) {
-
-        int limit = page * 20;
-
-        List<ChatMessage> chatMess = chatSer.getAllChatMessageInConversation(convId, page, size);
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        Conversation con = chatSer.findConversationById(user.getUsername(), convId);
 
+        Conversation con = chatSer.findConversationById(user.getUsername(), convId);
+        chatSer.seenAMessage(user, con);
+        List<ChatMessage> chatMess = chatSer.getAllChatMessageInConversation(convId, page, size);
 
         List<User> users = chatSer.getAllUserByConversations(Arrays.asList(con));
-
 
         return ChatMessageInfo.builder()
                 .chatMessages(chatMess)
@@ -64,12 +61,5 @@ public class ChatController {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         chatSer.sendMessage(user, req.getConversationId(), req.getChatMessage(), req.getSentAt());
-    }
-
-    @PostMapping("/seenMessage")
-    public void seenMessage(@RequestBody SeenMessageReq req) {
-        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        chatSer.seenAMessage(user,req.getConverId(), req.getChatMessageId());
     }
 }

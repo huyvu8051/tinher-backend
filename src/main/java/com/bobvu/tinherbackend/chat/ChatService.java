@@ -38,7 +38,7 @@ public interface ChatService {
      *
      * @param sentAt
      */
-    void seenAMessage(User seenBy,String convId, long sentAt);
+    void seenAMessage(User seenBy,Conversation con);
 
 
     String createNewConversation(User userDetails, User members);

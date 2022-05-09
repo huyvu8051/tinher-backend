@@ -55,16 +55,13 @@ public class ChatServiceImpl implements ChatService {
 
         List<String> memIds = uc.getMembers().stream().map(e -> e.getUserId()).collect(Collectors.toList());
 
-        noticeMessageViaSocket(conversationId, memIds, cm);
+        noticeMessageViaSocket( memIds, cm);
     }
 
     private ChatMessage saveNewChatMessage(User sender, String conversationId, String text, long thisTime) {
         log.info("==============sendMessage==============");
 
-        Seener seener = Seener.builder()
-                .username(sender.getUsername())
-                .seenAt(thisTime)
-                .build();
+        Seener seener = Seener.builder().username(sender.getUsername()).seenAt(thisTime).build();
 
         Set<Seener> seeners = new HashSet<>();
 
@@ -74,12 +71,7 @@ public class ChatServiceImpl implements ChatService {
 
         CMKey key = new CMKey(thisTime, conversationId);
 
-        ChatMessage cm = ChatMessage.builder()
-                .key(key)
-                .authorId(sender.getUsername())
-                .seeners(seeners)
-                .text(text)
-                .build();
+        ChatMessage cm = ChatMessage.builder().key(key).authorId(sender.getUsername()).seeners(seeners).text(text).build();
 
 
         return chatMessageRepository.save(cm);
@@ -94,10 +86,7 @@ public class ChatServiceImpl implements ChatService {
         List<OrderedConversation> orderedCons = new ArrayList<>();
 
         for (String userId : userIds) {
-            OrderedConversation o1 = OrderedConversation.builder()
-                    .conversationId(conversationId)
-                    .lastMessageTime(thisTime)
-                    .userId(userId)
+            OrderedConversation o1 = OrderedConversation.builder().conversationId(conversationId).lastMessageTime(thisTime).userId(userId)
 
                     .build();
 
@@ -115,7 +104,7 @@ public class ChatServiceImpl implements ChatService {
 
     }
 
-    private void noticeMessageViaSocket(String converId, List<String> userIds, ChatMessage cm) {
+    private void noticeMessageViaSocket(List<String> userIds, ChatMessage cm) {
 
         List<User> users = userRepo.findAllById(userIds);
 
@@ -124,14 +113,13 @@ public class ChatServiceImpl implements ChatService {
             if (user != null && user.getSocketId() != null) {
                 SocketIOClient client1 = server.getClient(UUID.fromString(user.getSocketId()));
                 if (client1 != null) {
-                    client1.sendEvent("receiveMessage", cm);
+                    client1.sendEvent("receiveMessage", cm, users);
                 }
             }
         }
 
 
     }
-
 
 
     @Override
@@ -160,24 +148,41 @@ public class ChatServiceImpl implements ChatService {
 
 
     @Override
-    public void seenAMessage(User seenBy, String convId, long sentAt) {
+    public void seenAMessage(User seenBy, Conversation con) {
 
-        ChatMessage cm = chatMessageRepository.findOneById(convId, sentAt).orElseThrow(() -> new NullPointerException("ChatMessage not found"));
+        ChatMessage lastMessage = chatMessageRepository.findOneById(con.getConversationId(), con.getLastMessageTime()).orElseThrow(() -> new NullPointerException("ChatMessage not found"));
 
-        Seener seener = Seener.builder()
-                .username(seenBy.getUsername())
-                .seenAt(System.currentTimeMillis())
-                .build();
+        Seener seener = Seener.builder().username(seenBy.getUsername()).seenAt(System.currentTimeMillis()).build();
 
-        cm.getSeeners().add(seener);
-        chatMessageRepository.save(cm);
+        Set<Seener> seeners = lastMessage.getSeeners();
+
+        Optional<Seener> any = seeners.stream().filter(e -> e.getUsername().equalsIgnoreCase(seenBy.getUsername())).findAny();
+
+        if (any.isPresent()) return;
+
+        seeners.add(seener);
+
+        chatMessageRepository.save(lastMessage);
+
+        // notice socket
+        Set<Member> members = con.getMembers();
+
+        List<User> users = userRepo.findAllById(members.stream().map(e -> e.getUserId()).collect(Collectors.toList()));
+
+        for (User user : users) {
+            if (user.getSocketId() != null) {
+                SocketIOClient client = server.getClient(UUID.fromString(user.getSocketId()));
+                if (client != null) {
+                    client.sendEvent("seen", lastMessage);
+                }
+            }
+        }
 
     }
 
 
     @Override
     public List<ChatMessage> findAllLastMessage(List<Conversation> conversations) {
-
 
 
         List<String> ids = conversations.stream().map(e -> e.getConversationId()).collect(Collectors.toList());
@@ -211,25 +216,13 @@ public class ChatServiceImpl implements ChatService {
         mems.add(m0);
         mems.add(m1);
 
-        Conversation uc0 = Conversation.builder()
-                .conversationId(converId)
-                .lastMessageTime(now)
-                .members(mems)
-                .build();
+        Conversation uc0 = Conversation.builder().conversationId(converId).lastMessageTime(now).members(mems).build();
 
         conRepo.save(uc0);
 
-        OrderedConversation con0 = OrderedConversation.builder()
-                .lastMessageTime(now)
-                .userId(creator.getUsername())
-                .conversationId(converId)
-                .build();
+        OrderedConversation con0 = OrderedConversation.builder().lastMessageTime(now).userId(creator.getUsername()).conversationId(converId).build();
 
-        OrderedConversation con1 = OrderedConversation.builder()
-                .lastMessageTime(now)
-                .userId(invitee.getUsername())
-                .conversationId(converId)
-                .build();
+        OrderedConversation con1 = OrderedConversation.builder().lastMessageTime(now).userId(invitee.getUsername()).conversationId(converId).build();
 
 
         orderedConverRepo.saveAll(Arrays.asList(con0, con1));

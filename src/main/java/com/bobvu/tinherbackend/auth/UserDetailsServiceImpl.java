@@ -8,8 +8,10 @@ import com.bobvu.tinherbackend.cassandra.model.User;
 import com.bobvu.tinherbackend.cassandra.repository.UserRepository;
 import com.bobvu.tinherbackend.elasticsearch.UserESRepository;
 import com.github.javafaker.Faker;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.query.UpdateQuery;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -81,6 +83,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, UserService {
 
         userEs.setLocation(geoPoint);
         userEsRepo.save(userEs);
+
     }
 
     private String getRandomImgUrl() {

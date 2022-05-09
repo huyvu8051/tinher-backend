@@ -16,4 +16,6 @@ public class Liked {
 
     @PrimaryKeyColumn(type = PrimaryKeyType.CLUSTERED)
     private String likedTargetId;
+
+    private long createTime;
 }

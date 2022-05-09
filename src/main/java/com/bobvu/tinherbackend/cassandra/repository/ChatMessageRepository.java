@@ -15,7 +15,7 @@ public interface ChatMessageRepository extends CassandraRepository<ChatMessage, 
     @Query("SELECT * FROM chatMessage WHERE conversationId = :converId")
     Slice<ChatMessage> findAllByConversationId(@Param("converId") String converId, Pageable pageable);
 
-    @Query("SELECT * FROM chatMessage WHERE conversationId = :converId AND sentAt = :sentAt")
+    @Query("SELECT * FROM chatMessage WHERE conversationId = :converId AND lastMessageTime = :sentAt")
     Optional<ChatMessage> findOneById(@Param("converId") String convId, @Param("sentAt") long cmId);
 
     @Query("SELECT * FROM chatMessage WHERE conversationId in :converIds and lastMessageTime in :lmts")
