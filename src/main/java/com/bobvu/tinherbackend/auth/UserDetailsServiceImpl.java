@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -58,7 +59,7 @@ public class UserDetailsServiceImpl implements UserDetailsService, UserService {
                 .minAge(15)
                 .gender(Gender.getRandom())
                 .lookingFor(Arrays.asList(Gender.FEMALE, Gender.MALE))
-                .yearOfBirth(1982 + rand.nextInt(40))
+                .dateOfBirth(LocalDate.of(1962 + rand.nextInt(40), rand.nextInt(11) +1, rand.nextInt(26) + 1))
                 .build();
 
 

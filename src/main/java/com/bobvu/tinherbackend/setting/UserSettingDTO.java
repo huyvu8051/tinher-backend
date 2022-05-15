@@ -6,6 +6,8 @@ import com.bobvu.tinherbackend.cassandra.model.Passion;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -21,5 +23,5 @@ public class UserSettingDTO {
     private double lon;
     private int distancePreference;
     private List<Integer> agePreference;
-    private int yearOfBirth;
+    private LocalDate dateOfBirth;
 }

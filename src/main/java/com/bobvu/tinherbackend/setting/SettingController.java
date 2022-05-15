@@ -31,7 +31,7 @@ public class SettingController {
                 .images(user.getImages())
                 .lookingFor(user.getLookingFor())
                 .agePreference(Arrays.asList(user.getMinAge(), user.getMaxAge()))
-                .yearOfBirth(user.getYearOfBirth())
+                .dateOfBirth(user.getDateOfBirth())
                 .build();
 
 

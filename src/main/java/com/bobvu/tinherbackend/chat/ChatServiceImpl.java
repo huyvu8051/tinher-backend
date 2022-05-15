@@ -108,12 +108,14 @@ public class ChatServiceImpl implements ChatService {
 
         List<User> users = userRepo.findAllById(userIds);
 
+        List<UserDto> collect = users.stream().map(e -> new UserDto(e)).collect(Collectors.toList());
+
 
         for (User user : users) {
             if (user != null && user.getSocketId() != null) {
                 SocketIOClient client1 = server.getClient(UUID.fromString(user.getSocketId()));
                 if (client1 != null) {
-                    client1.sendEvent("receiveMessage", cm, users);
+                    client1.sendEvent("message", cm, collect);
                 }
             }
         }

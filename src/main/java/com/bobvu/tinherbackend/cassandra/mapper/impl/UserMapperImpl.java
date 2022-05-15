@@ -100,7 +100,7 @@ public class UserMapperImpl implements UserMapper {
         user.setLat(request.getLat());
         user.setLon(request.getLon());
         user.setDistancePreference(request.getDistancePreference());
-        user.setYearOfBirth(request.getYearOfBirth());
+        user.setDateOfBirth(request.getDateOfBirth());
     }
 
 
@@ -130,7 +130,7 @@ public class UserMapperImpl implements UserMapper {
         if ( request.getGender() != null ) {
             user.setGender( request.getGender() );
         }
-        user.setYearOfBirth( request.getYearOfBirth() );
+        user.setYearOfBirth( request.getDateOfBirth().getYear() );
     }
 
 
@@ -156,7 +156,7 @@ public class UserMapperImpl implements UserMapper {
             user1.passions( new ArrayList<Passion>( list1 ) );
         }
         user1.gender( user.getGender() );
-        user1.yearOfBirth( user.getYearOfBirth() );
+        user1.yearOfBirth( user.getDateOfBirth().getYear() );
 
         return user1.build();
     }
